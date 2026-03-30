@@ -61,7 +61,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 
 ## 🇧🇷 Português
 
-# 🔧 Configuração do Ambiente — Projeto ANUBIS
+# 🔧 Configuração do Ambiente
 
 Este projeto utiliza uma estrutura automatizada para configuração do ambiente em R, garantindo reprodutibilidade e facilidade de uso entre diferentes usuários.
 
