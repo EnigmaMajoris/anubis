@@ -5,7 +5,7 @@
 Statistical analysis of behavioral health time series in Brazil, focusing on self-harm mortality by sex and macro-region. Methods include exploratory analysis and time series modeling to uncover temporal patterns and support public health research.
 
 Análise estatística de séries temporais em saúde mental no Brasil, com foco na mortalidade por autolesão segundo sexo e macrorregião. Os métodos incluem análise exploratória e modelagem de séries temporais para identificar padrões temporais e subsidiar pesquisas em saúde pública.
-<div></div>
+
 <table>
 <tr>
 <td valign="top">
