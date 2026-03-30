@@ -1,3 +1,33 @@
+# =============================================================================
+# .gitignore — PROJETO ANUBIS
+# =============================================================================
+ 
+# RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+ 
+# renv — só o lockfile vai para o repositório, não a biblioteca
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+ 
+# Manter estes arquivos do renv:
+!renv/activate.R
+!renv/settings.json
+!renv/.gitignore
+ 
+# Arquivos temporários do R
+*.Rout
+*.aux
+*.log
+*.synctex.gz
+
 # History files
 .Rhistory
 .Rapp.history
@@ -47,3 +77,6 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Dados brutos pesados — baixados automaticamente pelo 01_download_dados.R
+dados/brutos/sim_2000_2022.rds

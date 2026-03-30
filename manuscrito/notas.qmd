@@ -1,0 +1,635 @@
+---
+title: "Projeto ANUBIS — Notas Analíticas Preliminares"
+subtitle: "Construção da Base Populacional e Decisões Metodológicas"
+author: "Majory Melo"
+date: today
+date-format: "DD [de] MMMM [de] YYYY"
+categories: 
+# exemplo de categorias:
+  - "R"
+  - "Ciência de dados"
+  - "Visualização de dados"
+  - "Artigo"
+lang: pt
+format:
+  html:
+    toc: true
+    toc-depth: 5
+    toc-title: "Sumário"
+    toc-location: right
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-summary: "Mostrar código"
+    code-tools: true
+    highlight-style: github
+    embed-resources: true
+    fig-width: 10
+    fig-height: 6
+    fig-dpi: 150
+    fig-align: center
+    df-print: kable
+    css: |
+      body { font-family: 'Georgia', serif; font-size: 15px; line-height: 1.7; }
+      h1, h2, h3 { font-family: 'Helvetica Neue', sans-serif; }
+      .callout { margin: 1.2em 0; }
+      .tabela-manuscrito { font-size: 13px; }
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: false
+---
+
+```{r setup}
+#| include: false
+library(tidyverse)
+library(scales)
+library(knitr)
+library(kableExtra)
+library(glue)
+
+# Caminhos do projeto Anubis
+# Adaptar se necessário ao ambiente local
+caminho_base    <- "D:/Arquivos/ProjetosR/Anubis"
+caminho_tabelas <- file.path(caminho_base, "tabelas")
+caminho_figuras <- file.path(caminho_base, "imagens")
+caminho_limpos  <- file.path(caminho_base, "dados", "limpos")
+caminho_brutos  <- file.path(caminho_base, "dados", "brutos")
+caminho_manuscrito <- file.path(caminho_base, "mauscrito")
+
+# Carregar dados produzidos pelo script 01_download_dados.R
+ancoras      <- read_csv(file.path(caminho_tabelas, "tab00_ancoras_censitarias.csv"),
+                         show_col_types = FALSE)
+envelope     <- read_csv(file.path(caminho_tabelas, "tab01_envelope_demografico.csv"),
+                         show_col_types = FALSE)
+diag_spline  <- read_csv(file.path(caminho_tabelas, "tab02_resumo_spline.csv"),
+                         show_col_types = FALSE)
+comp_metodos <- read_csv(file.path(caminho_tabelas, "tab03_comparacao_metodos.csv"),
+                         show_col_types = FALSE)
+comparacao   <- read_csv(file.path(caminho_limpos, "comparacao_metodos_interpolacao.csv"),
+                         show_col_types = FALSE)
+pop_final    <- read_csv(file.path(caminho_limpos, "populacao_ibge_tratada.csv"),
+                         show_col_types = FALSE)
+
+# Constantes derivadas dos dados
+n_fora_spline  <- sum(diag_spline$n_anos_fora)
+dif_max_global <- max(comp_metodos$dif_max_pp)
+regiao_max_dif <- comp_metodos$local[which.max(comp_metodos$dif_max_pp)]
+ano_max_dif    <- comp_metodos$ano_max_dif[which.max(comp_metodos$dif_max_pp)]
+```
+
+---
+
+::: {.callout-note}
+## Sobre este documento
+Este arquivo registra observações e análises preliminares do **Projeto ANUBIS**
+— estudo de séries temporais de suicídio no Brasil (2000–2022). O objetivo é 
+documentar decisões metodológicas e fornecer evidências para a redação do 
+manuscrito.
+
+Repositório: [github.com/EnigmaMajoris/anubis](https://github.com/EnigmaMajoris/anubis)  
+Project board: [github.com/users/EnigmaMajoris/projects/2](https://github.com/users/EnigmaMajoris/projects/2/views/2)
+:::
+
+---
+
+# Visão geral da estratégia populacional
+
+A construção da base populacional seguiu uma estratégia em dois níveis distintos:
+
+**Nível 1 — Totais populacionais anuais:** obtidos integralmente de fontes
+observadas, sem imputação. Para os anos censitários e de contagem (2000, 2007,
+2010 e 2022), os totais provêm diretamente dos levantamentos do IBGE. Para os
+demais anos (2001–2006 e 2008–2021), utilizam-se as estimativas intercensitárias
+da Tabela SIDRA 6579.
+
+**Nível 2 — Desagregação por sexo nos anos intermediários:** as proporções
+masculina e feminina foram interpoladas a partir de quatro âncoras observadas
+(2000, 2007, 2010 e 2022) e aplicadas sobre os totais do Nível 1.
+
+A principal decisão metodológica desta etapa — a escolha do método de
+interpolação das proporções por sexo — é documentada em detalhe na
+@sec-comparacao-metodos.
+
+## Fontes utilizadas
+
+| Fonte | Tabela SIDRA | Cobertura | Variáveis |
+|---|---|---|---|
+| Censo Demográfico 2000 | Tab. 200 | Nacional por macrorregião | Total, homens, mulheres |
+| Contagem da População 2007 | Tab. 794 | Municípios ≤ 170 mil hab. | Total, homens, mulheres |
+| Censo Demográfico 2010 | Tab. 200 | Nacional por macrorregião | Total, homens, mulheres |
+| Estimativas anuais 2001–2021 | Tab. 6579 | Nacional por macrorregião | Total |
+| Censo Demográfico 2022 | Tab. 9514 | Nacional por macrorregião | Total, homens, mulheres |
+
+: Fontes populacionais utilizadas na construção da série 2000–2022 {#tbl-fontes}
+
+---
+
+# A Contagem da População de 2007 {#sec-contagem2007}
+
+## Por que o total de 2007 diverge dos anos adjacentes?
+
+Ao visualizar a série do Brasil, o ano de 2007 apresenta total de
+**`r format(ancoras |> filter(local == "Brasil", ano == 2007) |> pull(populacao_total), big.mark = ".", decimal.mark = ",")`
+pessoas** — muito abaixo dos ~186 milhões de 2006 e ~189 milhões de 2008. Esse
+valor não é erro de processamento. Reflete a natureza da operação censitária.
+
+::: {.callout-important}
+## Explicação oficial — IBGE (2007)
+A Contagem da População de 2007 não cobriu todos os municípios brasileiros.
+Por razões orçamentárias, o levantamento de campo foi restrito aos
+**municípios com até 170 mil habitantes**, universo que na época correspondia
+a 5.435 dos 5.564 municípios existentes. Para os **129 municípios excluídos**
+— todos de grande porte, predominantemente metropolitanos — o IBGE produziu
+estimativas separadas com metodologia própria.
+
+**Fonte:** IBGE. *Contagem da População 2007: primeiros resultados*. Rio de
+Janeiro: IBGE, 2007. Disponível em:
+[biblioteca.ibge.gov.br/visualizacao/livros/liv37666.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv37666.pdf)
+
+**Fonte complementar:** IBGE. *Metodologia do Censo Demográfico 2010*. Rio de
+Janeiro: IBGE, 2013. p. 28–30. (Série Relatórios Metodológicos, v. 41).
+Disponível em:
+[biblioteca.ibge.gov.br/visualizacao/livros/liv52675.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv52675.pdf)
+:::
+
+O valor de `r format(ancoras |> filter(local == "Brasil", ano == 2007) |> pull(populacao_total), big.mark = ".", decimal.mark = ",")` pessoas
+corresponde, portanto, à **população efetivamente recenseada de campo** —
+não à população total do Brasil em 2007. Por esse motivo, o total de 2007
+proveniente da Contagem **não é utilizado como denominador** nas taxas de
+mortalidade; essa função é exercida pelas estimativas anuais da Tabela 6579,
+que fornece valores completos e metodologicamente consistentes para todos os
+anos, inclusive 2007.
+
+## Papel da Contagem 2007 neste projeto
+
+A Contagem de 2007 é utilizada **exclusivamente como âncora para interpolação
+das proporções por sexo** — não dos totais populacionais. Essa distinção é
+fundamental: o que nos interessa de 2007 é a relação observada entre homens
+e mulheres, não o total absoluto recenseado.
+
+```{r ancoras-2007}
+#| label: tbl-ancoras-2007
+#| tbl-cap: "Proporções por sexo nas quatro âncoras censitárias — Brasil"
+
+ancoras |>
+  filter(local == "Brasil") |>
+  mutate(
+    fonte = case_when(
+      ano == 2000 ~ "Censo 2000",
+      ano == 2007 ~ "Contagem 2007*",
+      ano == 2010 ~ "Censo 2010",
+      ano == 2022 ~ "Censo 2022"
+    ),
+    `% Masculino` = round(prop_masc * 100, 3),
+    `% Feminino`  = round(prop_fem  * 100, 3),
+    `Total`       = format(populacao_total, big.mark = ".", decimal.mark = ",")
+  ) |>
+  select(Ano = ano, Fonte = fonte, `Total`, `% Masculino`, `% Feminino`) |>
+  kable(align = c("c","l","r","c","c")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover")) |>
+  footnote(
+    symbol = "Cobertura parcial: municípios com ≤ 170 mil habitantes (IBGE, 2007).",
+    footnote_as_chunk = TRUE
+  )
+```
+
+## Implicação metodológica: viés de seleção nas proporções de 2007
+
+A exclusão dos 129 municípios grandes da Contagem levanta uma questão legítima:
+**as proporções por sexo calculadas a partir da amostra coberta são
+representativas da população total?**
+
+Municípios de grande porte e metropolitanos tendem a concentrar **maior
+proporção feminina**, em razão dos padrões históricos de migração interna
+brasileira — onde mulheres migram em maior proporção para centros urbanos em
+busca de trabalho doméstico e serviços [@simoes2016]. A exclusão desses
+municípios poderia, em tese, superestimar a proporção masculina na Contagem.
+
+Contudo, dois argumentos sustentam a manutenção da Contagem como âncora:
+
+1. **Comparação com os Censos adjacentes:** a proporção masculina da Contagem
+2007 para o Brasil foi de
+**`r round(ancoras |> filter(local=="Brasil", ano==2007) |> pull(prop_masc)*100, 2)`%**,
+valor intermediário entre o Censo 2000
+(`r round(ancoras |> filter(local=="Brasil", ano==2000) |> pull(prop_masc)*100, 2)`%)
+e o Censo 2010
+(`r round(ancoras |> filter(local=="Brasil", ano==2010) |> pull(prop_masc)*100, 2)`%),
+o que é demograficamente coerente com a tendência de feminização progressiva
+da população brasileira [@ibge2022projecoes].
+
+2. **Análise de sensibilidade (@sec-sensibilidade):** a inclusão da Contagem 2007
+como âncora reduz o intervalo máximo sem referência de 22 anos (2000–2022) para
+dois segmentos de no máximo 10 anos (2000–2010 e 2010–2022), aumentando
+substancialmente a fidelidade da interpolação.
+
+---
+
+# Comparação de métodos de interpolação {#sec-comparacao-metodos}
+
+## Contexto da decisão
+
+Para os anos intermediários entre as âncoras censitárias, as proporções por sexo
+foram estimadas por interpolação. Dois métodos foram avaliados em paralelo sobre
+as mesmas âncoras e os mesmos dados:
+
+- **Spline cúbica natural** (`zoo::na.spline`): ajusta polinômios de grau 3 entre
+  os pontos de ancoragem, minimizando a curvatura total da série. É o método de
+  interpolação mais suave e frequentemente adotado em séries demográficas
+  [@hyndman2018forecasting].
+
+- **Interpolação linear por partes** (`zoo::na.approx`): conecta as âncoras por
+  segmentos de reta, sem curvatura adicional. É o método mais conservador e
+  matematicamente mais simples.
+
+A escolha entre os métodos foi feita com base em critérios objetivos, documentados
+a seguir.
+
+## Envelope demográfico das âncoras
+
+O critério principal de avaliação foi a **permanência dentro do envelope
+demográfico** — faixa definida pelos valores mínimo e máximo de proporção
+masculina observados nas quatro âncoras, acrescidos de margem de tolerância de
+0,5 ponto percentual por região.
+
+```{r envelope}
+#| label: tbl-envelope
+#| tbl-cap: "Envelope demográfico de plausibilidade por macrorregião (proporção masculina × 100)"
+
+envelope |>
+  mutate(across(where(is.numeric), ~ round(.x, 3))) |>
+  rename(
+    Região             = local,
+    `Mín observado`   = prop_masc_min_obs,
+    `Máx observado`   = prop_masc_max_obs,
+    `Limite inferior` = prop_masc_min,
+    `Limite superior` = prop_masc_max
+  ) |>
+  kable(align = c("l","c","c","c","c")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover")) |>
+  add_header_above(c(" " = 1,
+                     "Âncoras observadas" = 2,
+                     "Envelope (± 0,5 p.p.)" = 2))
+```
+
+## Figura 1 — Trajetórias comparadas por região
+
+A figura abaixo apresenta as trajetórias produzidas por cada método para o Brasil
+e as cinco macrorregiões, com o envelope demográfico sombreado, as âncoras
+observadas destacadas e os casos de extrapolação da spline marcados.
+
+```{r fig1}
+#| label: fig-spline-vs-linear
+#| fig-cap: "Proporção masculina interpolada por método — Brasil e macrorregiões, 2000–2022. Faixa cinza: envelope demográfico (âncoras ± 0,5 p.p.). Pontos verdes: âncoras observadas. Linha vertical tracejada: Contagem 2007."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "fig01_proporcoes_spline_vs_linear.png")
+)
+```
+
+A spline cúbica produz trajetórias claramente não-plausíveis em quatro das seis
+regiões: após atingir um pico artificial em torno de 2005 (efeito da curvatura
+induzida pelo intervalo curto de apenas três anos entre as âncoras de 2007 e 2010),
+a série despenca acentuadamente até 2017–2018, ultrapassando os limites inferiores
+do envelope. A interpolação linear, por contraste, acompanha a tendência geral de
+suave declínio na proporção masculina sem oscilações espúrias.
+
+## Diagnóstico quantitativo da spline
+
+```{r diag-spline}
+#| label: tbl-diag-spline
+#| tbl-cap: "Diagnóstico da spline cúbica por macrorregião — anos interpolados"
+
+diag_spline |>
+  mutate(
+    desvio_max_pp = round(desvio_max_pp, 4),
+    ano_pior      = ifelse(is.na(ano_pior), "—", as.character(ano_pior))
+  ) |>
+  rename(
+    Região                      = local,
+    `Anos fora do envelope (n)` = n_anos_fora,
+    `Desvio máx. (p.p.)`       = desvio_max_pp,
+    `Ano do maior desvio`       = ano_pior
+  ) |>
+  kable(align = c("l","c","c","c")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover")) |>
+  row_spec(which(diag_spline$n_anos_fora > 0), background = "#FFF3CD")
+```
+
+::: {.callout-warning}
+## Concentração do problema no Sudeste
+A região Sudeste concentrou **`r diag_spline |> filter(local=="Sudeste") |> pull(n_anos_fora)` dos
+`r n_fora_spline` casos** de extrapolação, com desvio máximo de
+**`r round(diag_spline |> filter(local=="Sudeste") |> pull(desvio_max_pp), 3)` p.p.**
+em 2017. Essa concentração não é aleatória: o Sudeste possui as maiores metrópoles
+do país — exatamente os municípios excluídos da Contagem 2007 — o que amplia o
+impacto do viés de seleção daquela fonte na âncora de 2007 e, consequentemente,
+na curvatura da spline naquele segmento.
+:::
+
+## Figura 2 — Overshoot da spline por região
+
+```{r fig2}
+#| label: fig-overshoot
+#| fig-cap: "Desvio da spline cúbica em relação ao envelope demográfico — anos interpolados. Barras laranjas: casos de extrapolação além do limite do envelope."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "fig02_overshoot_spline.png")
+)
+```
+
+A figura confirma que o overshoot é um fenômeno **concentrado temporalmente**
+(2012–2021) e **regionalmente** (Sudeste e, em menor grau, Brasil agregado),
+não distribuído aleatoriamente ao longo da série. Esse padrão é consistente com
+a explicação geométrica: o intervalo de apenas três anos entre as âncoras de 2007
+e 2010 força a spline a fazer uma inflexão abrupta, com propagação de curvatura
+espúria para os anos subsequentes.
+
+## Figura 3 — Diferença absoluta entre métodos
+
+```{r fig3}
+#| label: fig-diferenca
+#| fig-cap: "Diferença absoluta entre spline cúbica e interpolação linear (p.p.) — anos interpolados. Representa o erro que seria introduzido nas proporções caso a spline fosse adotada."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "fig03_diferenca_absoluta_metodos.png")
+)
+```
+
+```{r comp-metodos}
+#| label: tbl-comp-metodos
+#| tbl-cap: "Diferença entre spline cúbica e interpolação linear por macrorregião"
+
+comp_metodos |>
+  mutate(
+    dif_media_pp = round(dif_media_pp, 3),
+    dif_max_pp   = round(dif_max_pp, 3)
+  ) |>
+  rename(
+    Região                        = local,
+    `Dif. média (p.p.)`          = dif_media_pp,
+    `Dif. máx. (p.p.)`           = dif_max_pp,
+    `Ano da maior diferença`      = ano_max_dif
+  ) |>
+  kable(align = c("l","c","c","c")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover")) |>
+  row_spec(1, bold = TRUE, background = "#F8D7DA")
+```
+
+A maior divergência entre os métodos atingiu
+**`r round(dif_max_global, 3)` p.p.** na região **`r regiao_max_dif`** em
+**`r ano_max_dif`**. Em termos populacionais, esse desvio corresponderia a um erro
+de aproximadamente **`r format(round(pop_final |> filter(local == regiao_max_dif, ano == ano_max_dif) |> pull(populacao_total) * dif_max_global / 100), big.mark=".", decimal.mark=",")`
+pessoas** na desagregação por sexo naquele ano — magnitude relevante para
+denominadores de taxas de mortalidade em estudos de séries temporais.
+
+## Quadro comparativo final {#sec-quadro-comparativo}
+
+```{r quadro-final}
+#| label: tbl-quadro-final
+#| tbl-cap: "Comparação entre spline cúbica e interpolação linear — critérios de seleção do método"
+
+tibble(
+  Critério = c(
+    "Anos/região fora do envelope demográfico",
+    "Inflexões não-monotônicas detectadas",
+    "Desvio máximo do envelope (p.p.)",
+    "Maior divergência entre métodos (p.p.)",
+    "Região/ano crítico",
+    "Garantia de monotonia por segmento",
+    "Método adotado para a série final"
+  ),
+  `Spline cúbica` = c(
+    glue("{n_fora_spline} casos"),
+    "12 inflexões",
+    glue("{round(max(diag_spline$desvio_max_pp),3)}"),
+    glue("{round(dif_max_global,3)}"),
+    glue("{regiao_max_dif} / {ano_max_dif}"),
+    "❌  Não",
+    "❌  Não"
+  ),
+  `Interpolação linear` = c(
+    "0 casos",
+    "0 (por definição)",
+    "—",
+    "0 (referência)",
+    "—",
+    "✅  Sim",
+    "✅  Sim"
+  )
+) |>
+  kable(align = c("l","c","c")) |>
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped","hover")) |>
+  row_spec(7, bold = TRUE, background = "#D4EDDA") |>
+  column_spec(1, width = "50%")
+```
+
+::: {.callout-tip}
+## Justificativa metodológica — rascunho para o manuscrito
+A desagregação da população por sexo nos anos intermediários foi realizada por
+**interpolação linear por partes** das proporções masculina e feminina
+calculadas nas quatro âncoras censitárias observadas (Censos de 2000, 2010 e
+2022; Contagem da População de 2007). Dois métodos foram avaliados em paralelo —
+spline cúbica natural e interpolação linear — sobre as mesmas âncoras e o mesmo
+período.
+
+A spline cúbica produziu extrapolações fora do envelope demográfico plausível
+em **`r n_fora_spline` combinações** ano-região (de 114 avaliadas), com desvio
+máximo de **`r round(max(diag_spline$desvio_max_pp),3)` p.p.** na região
+Sudeste em 2017, e apresentou **12 inflexões não-monotônicas**. O fenômeno foi
+atribuído ao intervalo de apenas três anos entre as âncoras de 2007 e 2010, que
+induziu curvatura excessiva com propagação de artefato para os anos subsequentes.
+A maior divergência entre os dois métodos atingiu **`r round(dif_max_global,3)` p.p.**
+no Sudeste em `r ano_max_dif`.
+
+A interpolação linear permaneceu integralmente dentro do envelope em todas as
+combinações ano-região avaliadas e, por ser monotônica em cada segmento por
+definição matemática, não gerou inflexões espúrias. Em face desses resultados,
+a interpolação linear foi adotada como método para a série final.
+:::
+
+---
+
+# Análise de sensibilidade — âncora de 2007 {#sec-sensibilidade}
+
+```{r fig4}
+#| label: fig-sensibilidade
+#| fig-cap: "Análise de sensibilidade — impacto de incluir a Contagem 2007 como âncora. Comparação entre interpolação linear com e sem a âncora de 2007."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "fig04_sensibilidade_2007.png")
+)
+```
+
+A @fig-sensibilidade mostra que a inclusão da Contagem 2007 introduz uma
+inflexão visível na série linear em algumas regiões — especialmente Sudeste e
+Sul — onde a proporção da Contagem de 2007 é ligeiramente superior à tendência
+esperada entre 2000 e 2010. Isso é consistente com o viés de seleção discutido
+na @sec-contagem2007: a exclusão dos municípios maiores tende a superestimar
+levemente a proporção masculina na Contagem.
+
+Contudo, a diferença entre as duas configurações é **demograficamente pequena**
+para a maioria das regiões, e a inclusão da Contagem é metodologicamente
+preferível por dois motivos: (1) ancora a interpolação em dado de campo observado,
+e (2) divide o intervalo de 22 anos em dois segmentos menores, reduzindo a
+incerteza da estimativa intercensitária.
+
+::: {.callout-note}
+## Nota para a banca
+A pergunta previsível é: *"se a Contagem 2007 tem cobertura parcial, por que
+usá-la como âncora?"*
+
+A resposta é que **a alternativa — não usar a Contagem e interpolar entre 2000
+e 2010 — também tem limitações**, e mais graves: produz uma série baseada em um
+único segmento de 10 anos sem referência intermediária observada. A Contagem 2007,
+apesar da cobertura parcial, é a única fonte de campo disponível para o período
+intercensitário, e suas proporções por sexo são biologicamente plausíveis e
+coerentes com a tendência entre 2000 e 2010. A análise de sensibilidade documenta
+formalmente o impacto de incluí-la, permitindo que o leitor avalie a robustez
+das escolhas.
+:::
+
+---
+
+# Proporções observadas nas âncoras censitárias {#sec-ancoras}
+
+```{r fig5}
+#| label: fig-ancoras
+#| fig-cap: "Proporção masculina observada nas quatro âncoras censitárias — Brasil e macrorregiões. Triângulo: Contagem 2007; círculos: Censos demográficos."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "fig05_ancoras_censitarias.png")
+)
+```
+
+A @fig-ancoras evidência dois padrões relevantes para a discussão metodológica:
+
+1. **Tendência de feminização progressiva:** em todas as regiões, a proporção
+   masculina declina ao longo do período — de forma mais acentuada entre 2010 e
+   2022. Esse padrão é consistente com a literatura demográfica brasileira e com
+   as projeções do IBGE [@ibge2018projecoes].
+
+2. **Variação máxima inferior a 2 p.p.:** em nenhuma região a diferença entre a
+   maior e a menor proporção masculina observada supera 2 pontos percentuais ao
+   longo de 22 anos. Essa estreiteza da faixa de variação confirma que métodos
+   conservadores de interpolação são adequados — a suavidade adicional da spline
+   não traz benefício analítico que justifique o risco de extrapolação.
+
+```{r ancoras-todas}
+#| label: tbl-ancoras-todas
+#| tbl-cap: "Proporções masculinas observadas nas quatro âncoras censitárias — todas as regiões"
+
+ancoras |>
+  mutate(
+    fonte = case_when(
+      ano == 2000 ~ "Censo 2000",
+      ano == 2007 ~ "Contagem 2007*",
+      ano == 2010 ~ "Censo 2010",
+      ano == 2022 ~ "Censo 2022"
+    ),
+    `% Masculino` = round(prop_masc * 100, 3)
+  ) |>
+  select(Região = local, Ano = ano, Fonte = fonte, `% Masculino`) |>
+  pivot_wider(
+    names_from  = c(Ano, Fonte),
+    values_from = `% Masculino`,
+    names_glue  = "{Ano}\n{Fonte}"
+  ) |>
+  kable(align = "lcccc") |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover")) |>
+  footnote(
+    symbol = "Cobertura parcial: municípios com ≤ 170 mil habitantes.",
+    footnote_as_chunk = TRUE
+  )
+```
+
+---
+
+# Série populacional final {#sec-serie-final}
+
+```{r serie-brasil}
+#| label: tbl-serie-brasil
+#| tbl-cap: "Série populacional final — Brasil, 2000–2022 (interpolação linear adotada)"
+
+pop_final |>
+  filter(local == "Brasil") |>
+  mutate(
+    prop_masc = round(pop_masculino / populacao_total * 100, 3),
+    across(c(populacao_total, pop_masculino, pop_feminino),
+           ~ format(.x, big.mark = ".", decimal.mark = ","))
+  ) |>
+  select(
+    Ano           = ano,
+    `Total`       = populacao_total,
+    `Masculino`   = pop_masculino,
+    `Feminino`    = pop_feminino,
+    `% Masc.`     = prop_masc
+  ) |>
+  kable(align = c("c","r","r","r","c")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover")) |>
+  row_spec(which(pop_final |> filter(local=="Brasil") |> pull(ano) == 2007),
+           background = "#FFF3CD") |>
+  footnote(
+    general = "Linha em amarelo: ano da Contagem da População (total observado na operação censitária, não estimativa da população total do Brasil).",
+    footnote_as_chunk = TRUE
+  )
+```
+
+---
+
+# Referências bibliográficas e fontes {#sec-referencias}
+
+::: {#refs}
+:::
+
+**Fontes institucionais:**
+
+- IBGE. *Contagem da População 2007*. Rio de Janeiro: IBGE, 2007.
+  [biblioteca.ibge.gov.br/visualizacao/livros/liv37666.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv37666.pdf)
+
+- IBGE. *Estimativas da população residente nos municípios brasileiros — Tabela
+  SIDRA 6579*. Disponível em:
+  [sidra.ibge.gov.br/tabela/6579](https://sidra.ibge.gov.br/tabela/6579)
+
+- IBGE. *Projeções da população do Brasil e das Unidades da Federação —
+  Revisão 2018 — Tabela SIDRA 7358*. Disponível em:
+  [sidra.ibge.gov.br/tabela/7358](https://sidra.ibge.gov.br/tabela/7358)
+
+- IBGE. *Censo Demográfico 2022 — Tabela SIDRA 9514*. Disponível em:
+  [sidra.ibge.gov.br/tabela/9514](https://sidra.ibge.gov.br/tabela/9514)
+
+- IBGE. *Sinopse do Censo Demográfico 2010 — Tabela SIDRA 200*. Disponível em:
+  [sidra.ibge.gov.br/tabela/200](https://sidra.ibge.gov.br/tabela/200)
+
+- IBGE. *Contagem da População 2007 — Tabela SIDRA 794*. Disponível em:
+  [sidra.ibge.gov.br/tabela/794](https://sidra.ibge.gov.br/tabela/794)
+
+**Referências metodológicas:**
+
+- HYNDMAN, R. J.; ATHANASOPOULOS, G. *Forecasting: principles and practice*.
+  3. ed. Melbourne: OTexts, 2021. Disponível em: [otexts.com/fpp3](https://otexts.com/fpp3)
+
+- SIMÕES, C. C. S. *Relações entre as alterações históricas na dinâmica
+  demográfica brasileira e os impactos decorrentes do processo de envelhecimento
+  da população*. Rio de Janeiro: IBGE, 2016.
+  [biblioteca.ibge.gov.br/visualizacao/livros/liv98579.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv98579.pdf)
+
+- IBGE. *Projeções da população: Brasil e Unidades da Federação — revisão 2018*.
+  Rio de Janeiro: IBGE, 2018. (Série Relatórios Metodológicos, v. 40).
+  [biblioteca.ibge.gov.br/visualizacao/livros/liv101597.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv101597.pdf)
+
+---
+
+::: {.callout-note collapse="true"}
+## Informações da sessão R
+
+```{r session-info}
+sessionInfo()
+```
+:::
