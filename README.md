@@ -288,8 +288,6 @@ anubis/
 └── manuscrito/
 ```
 
-> ⚠️ **About the `dados/` folder:** raw data are not included in the repository due to privacy and/or size constraints. To request access, contact the author.
-
 ---
 
 ## 👥 Collaboration
