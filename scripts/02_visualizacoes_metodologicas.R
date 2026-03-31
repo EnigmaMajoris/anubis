@@ -4,19 +4,17 @@
 # OBJETIVO: Evidências visuais e tabulares para o manuscrito
 # AUTORA  : Majory Melo
 # DATA    : 2026-03-29
-# VERSÃO  : 3.0 (adequação editorial SINAPE 2026 / ABNT)
+# VERSÃO  : 3.0 
 #
-# NORMAS TIPOGRÁFICAS APLICADAS (SINAPE 2026 / ABNT NBR):
+# NORMAS TIPOGRÁFICAS APLICADAS (ABNT NBR):
 #   • Fonte do corpo do texto  : Times New Roman, 12 pt
 #   • Títulos de figuras/tabelas: Times New Roman, bold, 10 pt  ← legenda ABNT
 #   • Subtítulos e notas de rodapé: Times New Roman, 10 pt
 #   • Legendas de eixos        : 9 pt
 #   • Ticks numéricos          : 8 pt
 #   • Paleta de cores          : aprovada para reprodução em P&B e colorido
-#     (baseada em Okabe–Ito, perceptivelmente segura para daltônicos)
-#     ATENÇÃO: caso o comitê publique uma paleta institucional diferente,
-#     substitua os valores hex em `cores` abaixo.
-#
+#     
+#     
 # ESTRUTURA DE DIRETÓRIOS (caminhos relativos ao raiz do projeto):
 #   <raiz>/
 #   ├── imagens/   ← figuras PNG + PDF
@@ -46,17 +44,17 @@ dir_tabelas <- here("tabelas")
 dir.create(dir_imagens, showWarnings = FALSE, recursive = TRUE)
 dir.create(dir_tabelas, showWarnings = FALSE, recursive = TRUE)
 
-# Resolução padrão para impressão (SINAPE aceita 300 dpi)
+# Resolução padrão para impressão 
 dpi_padrao <- 300
 
 # =============================================================================
-# 2. PALETA EDITORIAL — SINAPE 2026
+# 2. PALETA EDITORIAL 
 #    Esquema Okabe–Ito (2008): acessível a daltônicos, distinto em P&B.
 #    Referência: Okabe M, Ito K. Color Universal Design (CUD). 2008.
 #    https://jfly.uni-koeln.de/color/
 #
-#    ATENÇÃO: Se o comitê do SINAPE 2026 publicar cores institucionais,
-#    substitua apenas os valores hex abaixo. O restante do script permanece.
+#    ATENÇÃO: Caso queira alterar, substitua apenas os valores hex abaixo. 
+#    O restante do script permanece.
 # =============================================================================
 cores <- list(
   spline   = "#E69F00",   # laranja dourado  — linha spline cúbica
@@ -65,19 +63,20 @@ cores <- list(
   fora     = "#D55E00",   # vermelho telha   — extrapolação fora do envelope
   dentro   = "#56B4E9",   # azul céu         — dentro do envelope
   envelope = "#999999",   # cinza médio      — ribbon do envelope
-  neutro   = "#F0E442"    # amarelo pálido   — destaque neutro (uso eventual)
+  neutro   = "#F0E442"    # amarelo pálido   — destaque neutro 
 )
 
 # =============================================================================
-# 3. TEMA EDITORIAL — SINAPE 2026 / ABNT NBR
-#    Times New Roman é a fonte exigida nos templates Word/LaTeX do SINAPE.
+# 3. TEMA EDITORIAL — ABNT NBR
+#    Times New Roman é a fonte exigida nos templates Word/LaTeX.
 #    Em sistemas sem a fonte instalada, o R substitui por uma serif similar;
 #    para garantir exatidão use: extrafont::loadfonts() após instalar a fonte.
 # =============================================================================
+
 fonte_base  <- "Times New Roman"   # altere para "serif" se não instalada
 tamanho_base <- 10                 # pt — base para escalamento relativo
 
-tema_sinape <- theme_bw(base_size = tamanho_base, base_family = fonte_base) +
+tema_artigo <- theme_bw(base_size = tamanho_base, base_family = fonte_base) +
   theme(
     # ------ Títulos e subtítulos (ABNT: negrito, fonte ≥ 10 pt) ------
     plot.title    = element_text(
@@ -128,11 +127,12 @@ tema_sinape <- theme_bw(base_size = tamanho_base, base_family = fonte_base) +
     panel.grid.major = element_line(color = "grey88", linewidth = 0.3)
   )
 
-message("===== SCRIPT 02 — SINAPE 2026 (versão 3.0) =====")
+message("===== SCRIPT 02 — ARTIGO =====")
 
 # =============================================================================
 # 4. PREPARAÇÃO DOS DADOS (comum a todas as figuras)
 # =============================================================================
+
 dados_fig1 <- prop_ambos |>
   left_join(
     limites_ancora |> select(local, prop_masc_min, prop_masc_max),
@@ -148,6 +148,7 @@ dados_fig1 <- prop_ambos |>
 # FIGURA 1 — Spline vs. Interpolação linear
 # Legenda ABNT: título ACIMA da figura, nota de fonte ABAIXO.
 # =============================================================================
+
 fig1 <- ggplot(dados_fig1, aes(x = ano)) +
   geom_ribbon(
     aes(ymin = prop_masc_min, ymax = prop_masc_max),
@@ -180,7 +181,7 @@ fig1 <- ggplot(dados_fig1, aes(x = ano)) +
     y        = "Proporção masculina (%)",
     caption  = "Fonte: IBGE (Censos 2000, 2010, 2022; Contagem da População 2007)."
   ) +
-  tema_sinape
+  tema_artigo
 
 ggsave(
   filename = file.path(dir_imagens, "fig01_proporcoes_spline_vs_linear.png"),
@@ -203,6 +204,7 @@ ggsave(
 # =============================================================================
 # FIGURA 2 — Overshoot da spline cúbica
 # =============================================================================
+
 fig2 <- ggplot(diag_spline, aes(x = ano, y = desvio_pp)) +
   geom_col(aes(fill = fora_envelope), width = 0.7) +
   scale_fill_manual(
@@ -220,7 +222,7 @@ fig2 <- ggplot(diag_spline, aes(x = ano, y = desvio_pp)) +
     y       = "Desvio (p.p.)",
     caption = "Fonte: elaboração própria com base nas âncoras censitárias do IBGE."
   ) +
-  tema_sinape
+  tema_artigo
 
 ggsave(file.path(dir_imagens, "fig02_overshoot_spline.png"),
        fig2, width = 16, height = 11, units = "cm",
@@ -231,6 +233,7 @@ ggsave(file.path(dir_imagens, "fig02_overshoot_spline.pdf"),
 # =============================================================================
 # FIGURA 3 — Diferença absoluta entre métodos
 # =============================================================================
+
 dados_fig3 <- prop_ambos |>
   filter(!ano %in% anos_ancora) |>
   mutate(dif = abs((prop_masc_spline - prop_masc_linear) * 100))
@@ -248,7 +251,7 @@ fig3 <- ggplot(dados_fig3, aes(x = ano, y = dif)) +
     y        = "Diferença absoluta (p.p.)",
     caption  = "Fonte: elaboração própria. Anos âncora excluídos (desvio definicionalmente nulo)."
   ) +
-  tema_sinape
+  tema_artigo
 
 ggsave(file.path(dir_imagens, "fig03_diferenca_absoluta_metodos.png"),
        fig3, width = 16, height = 11, units = "cm",
@@ -259,7 +262,9 @@ ggsave(file.path(dir_imagens, "fig03_diferenca_absoluta_metodos.pdf"),
 # =============================================================================
 # FIGURA 4 — Sensibilidade à inclusão da Contagem 2007
 # =============================================================================
+
 # Série sem 2007: interpolação direta entre 2000 e 2010
+
 prop_sem_2007 <- grade_completa |>
   left_join(
     ancora_completa |> filter(ano != 2007),
@@ -308,7 +313,7 @@ fig4 <- ggplot(dados_fig4, aes(x = ano, y = prop, color = serie,
     y        = "Proporção masculina (%)",
     caption  = "Fonte: IBGE (Censos 2000, 2010, 2022; Contagem da População 2007)."
   ) +
-  tema_sinape
+  tema_artigo
 
 ggsave(file.path(dir_imagens, "fig04_sensibilidade_2007.png"),
        fig4, width = 16, height = 11, units = "cm",
@@ -319,6 +324,7 @@ ggsave(file.path(dir_imagens, "fig04_sensibilidade_2007.pdf"),
 # =============================================================================
 # FIGURA 5 — Âncoras censitárias observadas
 # =============================================================================
+
 fig5 <- ggplot(ancora_completa, aes(x = ano, y = prop_masc)) +
   geom_line(color = "grey65", linetype = "dashed", linewidth = 0.6) +
   geom_point(color = cores$ancora, size = 2.5, shape = 19) +
@@ -332,7 +338,7 @@ fig5 <- ggplot(ancora_completa, aes(x = ano, y = prop_masc)) +
     y        = "Proporção masculina (%)",
     caption  = "Fonte: IBGE (Censos 2000, 2010, 2022; Contagem da População 2007)."
   ) +
-  tema_sinape
+  tema_artigo
 
 ggsave(file.path(dir_imagens, "fig05_ancoras_censitarias.png"),
        fig5, width = 16, height = 11, units = "cm",
@@ -342,7 +348,7 @@ ggsave(file.path(dir_imagens, "fig05_ancoras_censitarias.pdf"),
 
 # =============================================================================
 # 5. EXPORTAÇÃO DAS TABELAS
-#    Nomes de arquivo descritivos e padronizados (snake_case).
+#    Nomes de arquivo descritivos e padronizados (snake_case - padrão R).
 # =============================================================================
 write_csv(ancora_completa, file.path(dir_tabelas, "tab00_ancoras_censitarias.csv"))
 write_csv(limites_ancora,  file.path(dir_tabelas, "tab01_envelope_demografico.csv"))
