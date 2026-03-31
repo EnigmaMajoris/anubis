@@ -155,6 +155,7 @@ anubis/
 ├── renv.lock           # Registro das versões de todos os pacotes
 ├── scripts/
 │   └── 00_setup.R      # Carregamento dos pacotes do projeto
+├── docs/               # GitHub Pages
 ├── dados/              
 ├── imagens/
 ├── tabelas/
@@ -180,7 +181,7 @@ O ambiente será idêntico ao da autora (desde que as versões sejam compatívei
 
 | Requisito | Versão mínima |
 |---|---|
-| R | ≥ 4.3.1 (recomendado: ≥ 4.5.x) |
+| R | ≥ 4.5.3 |
 | renv | ≥ 1.2.0 |
 | RStudio | recomendado |
 
@@ -203,7 +204,7 @@ O ambiente será idêntico ao da autora (desde que as versões sejam compatívei
 
 | Component | Version |
 |---|---|
-| R | 4.5.1 |
+| R | 4.5.3 |
 | renv | 1.2.0 |
 | RStudio | 2026.1.2.418 |
 
@@ -282,6 +283,7 @@ anubis/
 ├── renv.lock           # Package version registry
 ├── scripts/
 │   └── 00_setup.R      # Project package loader
+├── docs/               # GitHub Pages
 ├── dados/              
 ├── imagens/
 ├── tabelas/
@@ -305,7 +307,7 @@ The environment will be identical to the author's (provided versions are compati
 
 | Requirement | Minimum Version |
 |---|---|
-| R | ≥ 4.5.1 |
+| R | ≥ 4.5.3 |
 | renv | ≥ 1.2.0 |
 | RStudio | recommended |
 
