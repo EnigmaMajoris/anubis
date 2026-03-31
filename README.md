@@ -69,15 +69,15 @@ Este projeto utiliza uma estrutura automatizada para configuração do ambiente 
 
 ## ⚠️ Aviso sobre versões do ambiente
 
-> Este projeto foi desenvolvido com as seguintes versões. Para garantir total reprodutibilidade, recomenda-se fortemente utilizar as mesmas versões ou superiores.
+> Este projeto foi desenvolvido com as seguintes versões. Para garantir total reprodutibilidade, recomenda-se utilizar as mesmas versões ou superiores.
 
 | Componente | Versão utilizada no desenvolvimento |
 |---      |---           |
-| R       | 4.5.13       |
+| R       | 4.5.3       |
 | renv    | 1.2.0        |
 | RStudio | 2026.1.2.418 |
 
-> **Atenção para colaboradores:** divergências de versão do R podem causar incompatibilidades no `renv.lock`. Se possível, atualize o R para a versão 4.5.x antes de iniciar.
+> **Atenção para colaboradores:** divergências de versão do R podem causar incompatibilidades no `renv.lock`. Se possível, atualize o R para a versão 4.5.3 antes de iniciar.
 
 ---
 
@@ -175,7 +175,7 @@ Para colaboradores:
 3. Execute `renv::restore()`
 4. Comece a trabalhar
 
-O ambiente será idêntico ao da autora (desde que as versões sejam compatíveis).
+O ambiente será idêntico ao dos autores (desde que as versões sejam compatíveis).
 
 ---
 
@@ -210,7 +210,7 @@ O ambiente será idêntico ao da autora (desde que as versões sejam compatívei
 | renv | 1.2.0 |
 | RStudio | 2026.1.2.418 |
 
-> **Collaborators:** version mismatches in R may cause `renv.lock` incompatibilities. Update to R ≥ 4.5.x before contributing.
+> **Collaborators:** version mismatches in R may cause `renv.lock` incompatibilities. Update to R ≥ 4.5.3 before contributing.
 
 ---
 
@@ -302,7 +302,7 @@ anubis/
 3. Run `renv::restore()`
 4. Start working
 
-The environment will be identical to the author's (provided versions are compatible).
+The environment will be identical to the authors' (provided versions are compatible).
 
 ---
 
@@ -319,5 +319,5 @@ The environment will be identical to the author's (provided versions are compati
 ## 💎 Technical Notes
 
 - `.Rprofile` **activates** `renv` — it does not install packages. Manual `renv::restore()` is required on first use.
-- `setup_inicial()` (defined in `scripts/00_setup.R`) is intended for specific cases only (e.g., new machine without `renv`). **Do not run in already configured environments.**
+- `setup_inicial()` (defined in `scripts/00_setup.R`) is intended for specific cases only (e.g.: new machine without `renv`). **Do not run in already configured environments.**
 - This project follows good data science reproducibility practices.
