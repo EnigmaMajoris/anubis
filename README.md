@@ -151,16 +151,18 @@ renv::snapshot()
 
 ```
 anubis/
-├── .Rprofile           # Ativa o renv automaticamente
-├── renv.lock           # Registro das versões de todos os pacotes
+├── .Rprofile           # Activates renv automatically
+├── renv.lock           # Package version registry
 ├── scripts/
-│   └── 00_setup.R      # Carregamento dos pacotes do projeto
+│   └── 00_setup.R      # Project package loader
+├── dados/              # ⚠️ Nem todos incluído no repositório (ver abaixo)          
 ├── docs/               # GitHub Pages
-├── dados/              
 ├── imagens/
 ├── tabelas/
 └── manuscrito/
 ```
+
+⚠️ **Sobre a pasta `dados/`:** alguns dados brutos não estão incluídos no repositório por questões de privacidade e/ou tamanho. Para obter acesso, entre em contato com os autores.
 
 ---
 
@@ -284,12 +286,13 @@ anubis/
 ├── scripts/
 │   └── 00_setup.R      # Project package loader
 ├── docs/               # GitHub Pages
-├── dados/              
+├── dados/              # ⚠️ Not all included in the repository (see below)
 ├── imagens/
 ├── tabelas/
 └── manuscrito/
 ```
 
+> ⚠️ **About the `dados/` folder:** some raw data are not included in the repository due to privacy and/or size constraints. To request access, contact the authors.
 ---
 
 ## 👥 Collaboration
