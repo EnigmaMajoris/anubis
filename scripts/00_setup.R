@@ -140,6 +140,10 @@ pacotes_cran <- c(
   "flextable"
 )
 
+# =========================================================
+# 🔹 INSTALAÇÃO REMOTA
+# =========================================================
+
 pacotes_github <- c(
   "rfsaldanha/microdatasus"
 )
