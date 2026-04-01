@@ -200,6 +200,12 @@ O ambiente será idêntico ao dos autores (desde que as versões sejam compatív
 
 ## 🇺🇸 English
 
+# 🔧 Environment Setup
+
+This project uses an automated framework for environment setup in R, ensuring reproducibility and ease of use across different users.
+
+---
+
 ## ⚠️ Version Warning
 
 > To ensure full reproducibility, use the same versions listed below, or higher.
