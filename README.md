@@ -42,7 +42,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 
 <tr>
 <td rowspan="2" align="center"><b>Henrique Pegorari</b></td>
-<td>E-mail: henrique.pegorari@hotmail.com)</td>
+<td>E-mail: henrique.pegorari@hotmail.com</td>
 </tr>
 <tr>
 <td>GitHub: <a href="github.com/HenriquePeg12s">HenriquePeg12</td>
