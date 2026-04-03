@@ -34,7 +34,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 
 <tr>
 <td rowspan="2" align="center"><b>Majory Melo</b></td>
-<td>E-mail: majorymelo@gmail.com</td>
+<td>📧 majorymelo@gmail.com</td>
 </tr>
 <tr>
 <td><img align="left" alt="img" src="https://github.com/EnigmaMajoris/EnigmaMajoris/blob/main/githubicon.png" width="22" height="22" /> <a href="https://github.com/EnigmaMajoris">EnigmaMajoris</a></td>
@@ -42,7 +42,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 
 <tr>
 <td rowspan="2" align="center"><b>Henrique Pegorari</b></td>
-<td>E-mail: henrique.pegorari@hotmail.com</td>
+<td>📧 henrique.pegorari@hotmail.com</td>
 </tr>
 <tr>
 <td><img align="left" alt="img" src="https://github.com/EnigmaMajoris/EnigmaMajoris/blob/main/githubicon.png" width="22" height="22" /> <a href="github.com/HenriquePeg12s">HenriquePeg12</td>
