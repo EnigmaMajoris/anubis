@@ -37,7 +37,8 @@
 #       mas com aviso explícito, permitindo detectar o problema.
 #   (b) A Tab200 já contém 265 células com "-" e "..." em grupos de idade
 #       de UFs específicas — nenhuma afeta as linhas de Total por macrorregião
-#       que usamos, mas ilustra que o risco é real nesses tipos de arquivos.
+#       que usamos, mas ilustra que o risco é real nesta família de arquivos.
+#   (c) Custo zero de adoção: parse_number() é do tidyverse (já carregado).
 # -----------------------------------------------------------------------------
 # REPOSITÓRIO: github.com/EnigmaMajoris/anubis
 # DEPENDÊNCIAS: 00_setup.R
@@ -45,7 +46,7 @@
 #               dados/brutos/Tabela200_Censo2000_2010.xlsx
 #               dados/brutos/Tabela9514_Censo2022.xlsx
 #               dados/brutos/Tabela794_Contagem2007.xlsx
-#               dados/brutos/Tabela7358_Projecao_2000_2022.xlsx  
+#               dados/brutos/Tabela7358_Projecao_2000_2022.xlsx  (reservado)
 # SAIDA       : dados/brutos/sim_2000_2022.rds
 #               dados/limpos/populacao_ibge_tratada.csv
 #               dados/limpos/comparacao_metodos_interpolacao.csv
@@ -94,7 +95,7 @@ config <- list(
   anos_ancora     = c(2000L, 2007L, 2010L, 2022L),
 
   # Margem de tolerância do envelope demográfico (em proporção, não p.p.)
-  margem_envelope = 0.005,   # 0,5 p.p.
+  margem_envelope = 0.005,   
 
   # Caminhos de entrada (relativos ao raiz do projeto)
   path_tab200  = "dados/brutos/Tabela200_Censo2000_2010.xlsx",
@@ -108,7 +109,7 @@ config <- list(
   path_comp_csv   = "dados/limpos/comparacao_metodos_interpolacao.csv",
 
   # Estrutura esperada da Tab9514 (posições 1-indexed das colunas de interesse)
-  # Sempre verificar se houve mudança
+  # Verificar se mudou ao re-baixar do SIDRA
   tab9514_col_total    = 2L,
   tab9514_col_homens   = 24L,
   tab9514_col_mulheres = 46L,
@@ -162,8 +163,8 @@ baixar_sim <- function(anos = config$anos_sim) {
   }
 
   # Verificar compatibilidade de colunas antes do bind_rows.
-  # Anos diferentes do SIM podem ter colunas distintas por mudanças no template
-  # — bind_rows preencheria as diferenças com NA silenciosamente.
+  # Anos diferentes do SIM podem ter colunas distintas por mudanças no
+  # formulário DO — bind_rows preencheria as diferenças com NA silenciosamente.
   colunas_por_ano <- lapply(lista_anos, names)
   if (length(unique(lapply(colunas_por_ano, sort))) > 1) {
     anos_distintos <- sapply(lista_anos, function(df) unique(df$ano_download))
@@ -223,7 +224,7 @@ ler_tab200 <- function(path = config$path_tab200,
 # IMPORTANTE: pop_feminino é o valor REAL da fonte — não calculado por
 # subtração. O total da Contagem inclui parcela com sexo não declarado,
 # portanto pop_masculino + pop_feminino ≠ populacao_total em 2007.
-# # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 ler_tab794 <- function(path  = config$path_tab794,
                        skip  = config$tab794_skip,
                        locais = config$locais) {
@@ -271,7 +272,6 @@ ler_tab9514 <- function(path   = config$path_tab9514,
 
   # Verificação de estrutura: linha 6 (R 1-indexed) contém os rótulos de grupo
   # (Total | Homens | Mulheres). Falha com mensagem descritiva se layout mudar,
-  # evitando seleção silenciosa da coluna errada.
   linha_header <- as.character(raw[6, ])
   rotulos_ok <- list(
     list(pos = col_total,    esperados = c("Total", "total", "TOTAL")),
@@ -287,8 +287,7 @@ ler_tab9514 <- function(path   = config$path_tab9514,
       ))
     }
   }
-  log_info("Tab9514 — posições verificadas: Total({col_total}), 
-           Homens({col_homens}), Mulheres({col_mulheres}) ✓")
+  log_info("Tab9514 — posições verificadas: Total({col_total}), Homens({col_homens}), Mulheres({col_mulheres}) ✓")
 
   resultado <- raw |>
     select(local        = all_of(col_total - 1L),  # col 1 = local (0-indexed internamente)
@@ -338,12 +337,10 @@ ler_tab6579 <- function(path       = config$path_tab6579,
   }
   anos_invalidos <- anos_num[!is.na(anos_num) & (anos_num < 1990 | anos_num > 2050)]
   if (length(anos_invalidos) > 0) {
-    log_warn("Tabela 6579: anos fora do intervalo plausível: 
-             {paste(anos_invalidos, collapse=', ')}")
+    log_warn("Tabela 6579: anos fora do intervalo plausível: {paste(anos_invalidos, collapse=', ')}")
   }
   names(raw)[-1] <- anos_raw
-  log_info("Tabela 6579 — anos: {paste(sort(anos_num[!is.na(anos_num)]), 
-           collapse=', ')}")
+  log_info("Tabela 6579 — anos: {paste(sort(anos_num[!is.na(anos_num)]), collapse=', ')}")
 
   resultado <- raw |>
     filter(local %in% locais) |>
@@ -390,8 +387,7 @@ construir_ancoras <- function(censo_2000_2010, contagem_2007, censo_2022,
     log_warn("Algum local com menos de {length(anos_ancora)} âncoras — verificar!")
     print(check)
   } else {
-    log_info("Âncoras OK — {paste(anos_ancora, collapse=', ')} 
-             presentes para todos os locais.")
+    log_info("Âncoras OK — {paste(anos_ancora, collapse=', ')} presentes para todos os locais.")
   }
 
   return(ancora)
@@ -440,7 +436,7 @@ montar_serie_total <- function(ancora_completa, pop_total_6579,
 # usando dois métodos em paralelo (spline cúbica e linear por partes).
 # Retorna lista com:
 #   $prop_ambos     — data.frame com ambos os métodos (para diagnóstico)
-#   $prop_final     — data.frame com método o método escolhido (spoiler: linear)
+#   $prop_final     — data.frame com método linear adotado (para série final)
 # -----------------------------------------------------------------------------
 interpolar_proporcoes <- function(ancora_completa,
                                   locais = config$locais) {
@@ -655,8 +651,7 @@ diagnosticar_linear <- function(prop_ambos, limites_ancora,
   n_fora <- sum(por_ano$fora_envelope, na.rm = TRUE)
 
   if (n_fora == 0) {
-    log_info("Linear — APROVADA: 0 casos fora do envelope 
-             (âncoras ± {margem*100} p.p.)")
+    log_info("Linear — APROVADA: 0 casos fora do envelope (âncoras ± {margem*100} p.p.)")
   } else {
     log_warn("Linear — {n_fora} caso(s) fora do envelope:")
     por_ano |>
@@ -774,6 +769,10 @@ ancora_completa <- construir_ancoras(censo_2000_2010, contagem_2007, censo_2022,
 pop_total_todos <- montar_serie_total(ancora_completa, pop_total_6579,
                                       locais = config$locais)
 
+# grade_completa exposta no ambiente global para o script 02 (fig4 — sensibilidade 2007)
+# Recriada aqui explicitamente pois fica encapsulada dentro das funções acima
+grade_completa  <- expand_grid(local = config$locais, ano = 2000:2022)
+
 # 2.4 Interpolação das proporções por sexo
 interp          <- interpolar_proporcoes(ancora_completa, locais = config$locais)
 prop_ambos      <- interp$prop_ambos   # mantido em memória para o script 02
@@ -812,8 +811,15 @@ limites_ancora |> mutate(across(where(is.numeric), ~ round(.x, 5))) |> print()
 
 diag_spline_res <- diagnosticar_spline(prop_ambos, limites_ancora,
                                         anos_ancora = anos_ancora)
-diag_spline     <- diag_spline_res$resumo      # alias para script 02
+diag_spline     <- diag_spline_res$resumo      # alias para script 02 (write_csv tab02)
 n_fora_spline   <- diag_spline_res$n_fora
+# Aliases adicionais para o script 02:
+# resumo_spline   — nome original esperado pelo write_csv do script 02
+# inflexoes_spline — usado no log do script 02
+# diag_spline_por_ano — usado pela fig2 (precisa de colunas desvio_pp e fora_envelope)
+resumo_spline        <- diag_spline_res$resumo    # mesmo conteúdo que diag_spline
+inflexoes_spline     <- diag_spline_res$inflexoes
+diag_spline_por_ano  <- diag_spline_res$por_ano   # fig2: desvio_pp + fora_envelope
 
 log_info("Resumo spline por região:")
 diag_spline |> mutate(across(where(is.double), ~ round(.x, 4))) |> print()
@@ -842,7 +848,8 @@ regiao_max_dif <- resumo_comp$local[which.max(resumo_comp$dif_max_pp)]
 ano_max_dif    <- resumo_comp$ano_max_dif[which.max(resumo_comp$dif_max_pp)]
 
 log_info(paste0(
-  "CONCLUSÃO: spline — {n_fora_spline} caso(s) fora do envelope | ", "{nrow(diag_spline_res$inflexoes)} inflexão(ões). ",
+  "CONCLUSÃO: spline — {n_fora_spline} caso(s) fora do envelope | ",
+  "{nrow(diag_spline_res$inflexoes)} inflexão(ões). ",
   "Linear — {n_fora_linear} caso(s). ",
   "Maior divergência: {round(dif_max_global,3)} p.p. ({regiao_max_dif}, {ano_max_dif})."
 ))
