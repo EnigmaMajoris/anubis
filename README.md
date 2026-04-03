@@ -21,7 +21,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 <td><a href="#-português">🇧🇷 Português</a></td>
 </tr>
 </table>
-
+<b>GitHub Project:</b> <a href="https://github.com/users/EnigmaMajoris/projects/2">Kanban_Anubis
 </td>
 
 <td valign="top">
@@ -37,7 +37,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 <td>E-mail: majorymelo@gmail.com</td>
 </tr>
 <tr>
-<td>GitHub: <a href="https://github.com/EnigmaMajoris">EnigmaMajoris</a></td>
+<td><img align="left" alt="img" src="https://github.com/EnigmaMajoris/EnigmaMajoris/blob/main/githubicon.png" width="22" height="22" /> <a href="https://github.com/EnigmaMajoris">EnigmaMajoris</a></td>
 </tr>
 
 <tr>
@@ -45,7 +45,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 <td>E-mail: henrique.pegorari@hotmail.com</td>
 </tr>
 <tr>
-<td>GitHub: <a href="github.com/HenriquePeg12s">HenriquePeg12</td>
+<td><img align="left" alt="img" src="https://github.com/EnigmaMajoris/EnigmaMajoris/blob/main/githubicon.png" width="22" height="22" /> <a href="github.com/HenriquePeg12s">HenriquePeg12</td>
 </tr>
 
 </table>
