@@ -1,16 +1,17 @@
 ---
 title: "Projeto ANUBIS — Notas Analíticas Preliminares"
-subtitle: "Construção da Base Populacional e Decisões Metodológicas"
-author: "Majory Melo"
+subtitle: "Dados, análises, modelagens, discussões e tomadas de decisões"
+author: "Majory Melo e Henrique Pegorari"
 date: today
 date-format: "DD [de] MMMM [de] YYYY"
 categories: 
-# exemplo de categorias:
   - "R"
   - "Ciência de dados"
   - "Visualização de dados"
   - "Artigo"
 lang: pt
+bibliography: referencias.bib
+csl: abnt.csl
 format:
   html:
     toc: true
@@ -23,6 +24,8 @@ format:
     code-summary: "Mostrar código"
     code-tools: true
     highlight-style: github
+    output-file: index.html
+    output-dir: ../docs
     embed-resources: true
     fig-width: 10
     fig-height: 6
@@ -48,23 +51,27 @@ library(scales)
 library(knitr)
 library(kableExtra)
 library(glue)
+library(here)
 
 # Caminhos do projeto Anubis
-# Adaptar se necessário ao ambiente local
-caminho_base    <- "D:/Arquivos/ProjetosR/Anubis"
+# Raiz do projeto resolvida automaticamente pelo here (requer .Rproj ou .here na raiz)
+# Não alterar este caminho — portável entre máquinas
+caminho_base    <- here::here()
 caminho_tabelas <- file.path(caminho_base, "tabelas")
 caminho_figuras <- file.path(caminho_base, "imagens")
 caminho_limpos  <- file.path(caminho_base, "dados", "limpos")
 caminho_brutos  <- file.path(caminho_base, "dados", "brutos")
-caminho_manuscrito <- file.path(caminho_base, "mauscrito")
+caminho_manuscrito <- file.path(caminho_base, "manuscrito")
 
-# Carregar dados produzidos pelo script 01_download_dados.R
+# Carregar dados produzidos pelos scripts 01 e 02
 ancoras      <- read_csv(file.path(caminho_tabelas, "tab00_ancoras_censitarias.csv"),
                          show_col_types = FALSE)
 envelope     <- read_csv(file.path(caminho_tabelas, "tab01_envelope_demografico.csv"),
                          show_col_types = FALSE)
 diag_spline  <- read_csv(file.path(caminho_tabelas, "tab02_resumo_spline.csv"),
-                         show_col_types = FALSE)
+                         show_col_types = FALSE) |>
+  # ano_pior vem como float no CSV por causa do NA — converter para integer
+  mutate(ano_pior = as.integer(ano_pior))
 comp_metodos <- read_csv(file.path(caminho_tabelas, "tab03_comparacao_metodos.csv"),
                          show_col_types = FALSE)
 comparacao   <- read_csv(file.path(caminho_limpos, "comparacao_metodos_interpolacao.csv"),
@@ -72,7 +79,7 @@ comparacao   <- read_csv(file.path(caminho_limpos, "comparacao_metodos_interpola
 pop_final    <- read_csv(file.path(caminho_limpos, "populacao_ibge_tratada.csv"),
                          show_col_types = FALSE)
 
-# Constantes derivadas dos dados
+# Constantes derivadas dos dados — alimentam texto e quadros inline
 n_fora_spline  <- sum(diag_spline$n_anos_fora)
 dif_max_global <- max(comp_metodos$dif_max_pp)
 regiao_max_dif <- comp_metodos$local[which.max(comp_metodos$dif_max_pp)]
@@ -281,7 +288,7 @@ observadas destacadas e os casos de extrapolação da spline marcados.
 
 ```{r fig1}
 #| label: fig-spline-vs-linear
-#| fig-cap: "Proporção masculina interpolada por método — Brasil e macrorregiões, 2000–2022. Faixa cinza: envelope demográfico (âncoras ± 0,5 p.p.). Pontos verdes: âncoras observadas. Linha vertical tracejada: Contagem 2007."
+#| fig-cap: "Proporção masculina interpolada por método — Brasil e macrorregiões, 2000–2022. Faixa cinza: envelope demográfico (âncoras ± 0,5 p.p.). Linha azul: interpolação linear. Linha tracejada: spline cúbica."
 #| out-width: "100%"
 
 knitr::include_graphics(
@@ -406,8 +413,8 @@ tibble(
   `Spline cúbica` = c(
     glue("{n_fora_spline} casos"),
     "12 inflexões",
-    glue("{round(max(diag_spline$desvio_max_pp),3)}"),
-    glue("{round(dif_max_global,3)}"),
+    glue("{round(max(diag_spline$desvio_max_pp), 3)}"),
+    glue("{round(dif_max_global, 3)}"),
     glue("{regiao_max_dif} / {ano_max_dif}"),
     "❌  Não",
     "❌  Não"
@@ -439,11 +446,11 @@ período.
 
 A spline cúbica produziu extrapolações fora do envelope demográfico plausível
 em **`r n_fora_spline` combinações** ano-região (de 114 avaliadas), com desvio
-máximo de **`r round(max(diag_spline$desvio_max_pp),3)` p.p.** na região
+máximo de **`r round(max(diag_spline$desvio_max_pp), 3)` p.p.** na região
 Sudeste em 2017, e apresentou **12 inflexões não-monotônicas**. O fenômeno foi
 atribuído ao intervalo de apenas três anos entre as âncoras de 2007 e 2010, que
 induziu curvatura excessiva com propagação de artefato para os anos subsequentes.
-A maior divergência entre os dois métodos atingiu **`r round(dif_max_global,3)` p.p.**
+A maior divergência entre os dois métodos atingiu **`r round(dif_max_global, 3)` p.p.**
 no Sudeste em `r ano_max_dif`.
 
 A interpolação linear permaneceu integralmente dentro do envelope em todas as
@@ -480,7 +487,7 @@ e (2) divide o intervalo de 22 anos em dois segmentos menores, reduzindo a
 incerteza da estimativa intercensitária.
 
 ::: {.callout-note}
-## Nota para a banca
+## Nota para discussão
 A pergunta previsível é: *"se a Contagem 2007 tem cobertura parcial, por que
 usá-la como âncora?"*
 
@@ -500,7 +507,7 @@ das escolhas.
 
 ```{r fig5}
 #| label: fig-ancoras
-#| fig-cap: "Proporção masculina observada nas quatro âncoras censitárias — Brasil e macrorregiões. Triângulo: Contagem 2007; círculos: Censos demográficos."
+#| fig-cap: "Proporção masculina observada nas quatro âncoras censitárias — Brasil e macrorregiões. Pontos: valores diretamente observados nos levantamentos do IBGE."
 #| out-width: "100%"
 
 knitr::include_graphics(
@@ -508,7 +515,7 @@ knitr::include_graphics(
 )
 ```
 
-A @fig-ancoras evidência dois padrões relevantes para a discussão metodológica:
+A @fig-ancoras evidencia dois padrões relevantes para a discussão metodológica:
 
 1. **Tendência de feminização progressiva:** em todas as regiões, a proporção
    masculina declina ao longo do período — de forma mais acentuada entre 2010 e
@@ -583,46 +590,10 @@ pop_final |>
 
 ---
 
-# Referências bibliográficas e fontes {#sec-referencias}
+# Referências {#sec-referencias}
 
 ::: {#refs}
 :::
-
-**Fontes institucionais:**
-
-- IBGE. *Contagem da População 2007*. Rio de Janeiro: IBGE, 2007.
-  [biblioteca.ibge.gov.br/visualizacao/livros/liv37666.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv37666.pdf)
-
-- IBGE. *Estimativas da população residente nos municípios brasileiros — Tabela
-  SIDRA 6579*. Disponível em:
-  [sidra.ibge.gov.br/tabela/6579](https://sidra.ibge.gov.br/tabela/6579)
-
-- IBGE. *Projeções da população do Brasil e das Unidades da Federação —
-  Revisão 2018 — Tabela SIDRA 7358*. Disponível em:
-  [sidra.ibge.gov.br/tabela/7358](https://sidra.ibge.gov.br/tabela/7358)
-
-- IBGE. *Censo Demográfico 2022 — Tabela SIDRA 9514*. Disponível em:
-  [sidra.ibge.gov.br/tabela/9514](https://sidra.ibge.gov.br/tabela/9514)
-
-- IBGE. *Sinopse do Censo Demográfico 2010 — Tabela SIDRA 200*. Disponível em:
-  [sidra.ibge.gov.br/tabela/200](https://sidra.ibge.gov.br/tabela/200)
-
-- IBGE. *Contagem da População 2007 — Tabela SIDRA 794*. Disponível em:
-  [sidra.ibge.gov.br/tabela/794](https://sidra.ibge.gov.br/tabela/794)
-
-**Referências metodológicas:**
-
-- HYNDMAN, R. J.; ATHANASOPOULOS, G. *Forecasting: principles and practice*.
-  3. ed. Melbourne: OTexts, 2021. Disponível em: [otexts.com/fpp3](https://otexts.com/fpp3)
-
-- SIMÕES, C. C. S. *Relações entre as alterações históricas na dinâmica
-  demográfica brasileira e os impactos decorrentes do processo de envelhecimento
-  da população*. Rio de Janeiro: IBGE, 2016.
-  [biblioteca.ibge.gov.br/visualizacao/livros/liv98579.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv98579.pdf)
-
-- IBGE. *Projeções da população: Brasil e Unidades da Federação — revisão 2018*.
-  Rio de Janeiro: IBGE, 2018. (Série Relatórios Metodológicos, v. 40).
-  [biblioteca.ibge.gov.br/visualizacao/livros/liv101597.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv101597.pdf)
 
 ---
 

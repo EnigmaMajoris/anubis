@@ -205,7 +205,9 @@ ggsave(
 # FIGURA 2 — Overshoot da spline cúbica
 # =============================================================================
 
-fig2 <- ggplot(diag_spline, aes(x = ano, y = desvio_pp)) +
+# diag_spline_por_ano contém as colunas desvio_pp e fora_envelope (diagnóstico ano a ano)
+# diag_spline é o resumo por região — não tem essas colunas
+fig2 <- ggplot(diag_spline_por_ano, aes(x = ano, y = desvio_pp)) +
   geom_col(aes(fill = fora_envelope), width = 0.7) +
   scale_fill_manual(
     name   = "Situação",
@@ -352,7 +354,7 @@ ggsave(file.path(dir_imagens, "fig05_ancoras_censitarias.pdf"),
 # =============================================================================
 write_csv(ancora_completa, file.path(dir_tabelas, "tab00_ancoras_censitarias.csv"))
 write_csv(limites_ancora,  file.path(dir_tabelas, "tab01_envelope_demografico.csv"))
-write_csv(resumo_spline,   file.path(dir_tabelas, "tab02_resumo_spline.csv"))
+write_csv(resumo_spline,   file.path(dir_tabelas, "tab02_resumo_spline.csv"))   # resumo por região
 write_csv(resumo_comp,     file.path(dir_tabelas, "tab03_comparacao_metodos.csv"))
 
 # =============================================================================
