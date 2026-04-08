@@ -1,0 +1,6 @@
+variavel,n_total,n_valido,n_missing,pct_missing,base
+CAUSABAS,240844,240844,0,0,bruto_pos_cid
+DTOBITO,240844,240842,2,0,bruto_pos_cid
+SEXO,240844,240804,40,0.02,bruto_pos_cid
+IDADE,240844,240251,593,0.25,bruto_pos_cid
+CODMUNRES,240844,240844,0,0,bruto_pos_cid

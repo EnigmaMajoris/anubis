@@ -1,0 +1,7 @@
+modelo,tipo,fitdf,lb12_stat,lb12_pvalor,lb24_stat,lb24_pvalor,sw_stat,sw_pvalor,res_media,res_dp,res_ok_lb12,res_ok_lb24,res_normal_sw
+Total,sarima,5,8.84,0.2643,22.794,0.2466,0.9814,0.0011,-0.003474,0.288643,TRUE,TRUE,FALSE
+Masculino,sarima,5,8.237,0.3122,23.324,0.2234,0.9799,6e-4,-0.004564,0.495807,TRUE,TRUE,FALSE
+Feminino,sarima,3,6.243,0.7154,16.649,0.7321,0.9944,0.4103,-0.001852,0.202753,TRUE,TRUE,TRUE
+Total,ets,0,10.058,0.6109,21.154,0.6296,0.9894,0.0413,5.94e-4,0.044762,TRUE,TRUE,FALSE
+Masculino,ets,0,9.369,0.6712,19.731,0.712,0.989,0.0342,7.94e-4,0.049475,TRUE,TRUE,FALSE
+Feminino,ets,0,4.728,0.9664,15.244,0.9134,0.9921,0.1515,-4.09e-4,0.081422,TRUE,TRUE,TRUE

@@ -1,0 +1,4 @@
+Teste,Estatística,p-valor,Conclusão
+QS (Ljung-Box sazonal),86.915,0,Sazonalidade detectada
+Friedman (fried),112.467,0,Sazonalidade detectada
+Kruskal-Wallis (kw),132.815,0,Diferença entre meses

@@ -38,7 +38,7 @@
 # │       ✔ Criar a estrutura de diretórios do projeto                      │
 # │       ✔ Criar arquivos .gitkeep nas pastas vazias                       │
 # │                                                                         │
-# │  3. Reinicie o R (Ctrl+Shift+F10) e reabra o projeto                   │
+# │  3. Reinicie o R (Ctrl+Shift+F10) e reabra o projeto                    │
 # │     → iniciar_sessao() rodará automaticamente                           │
 # └─────────────────────────────────────────────────────────────────────────┘
 #
