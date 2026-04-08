@@ -15,7 +15,7 @@ csl: abnt.csl
 format:
   html:
     toc: true
-    toc-depth: 5
+    toc-depth: 10
     toc-title: "Sumário"
     toc-location: right
     number-sections: true
@@ -54,23 +54,19 @@ library(glue)
 library(here)
 
 # Caminhos do projeto Anubis
-# Raiz do projeto resolvida automaticamente pelo here (requer .Rproj ou .here na raiz)
-# Não alterar este caminho — portável entre máquinas
 caminho_base    <- here::here()
 caminho_tabelas <- file.path(caminho_base, "tabelas")
 caminho_figuras <- file.path(caminho_base, "imagens")
 caminho_limpos  <- file.path(caminho_base, "dados", "limpos")
 caminho_brutos  <- file.path(caminho_base, "dados", "brutos")
-caminho_manuscrito <- file.path(caminho_base, "manuscrito")
 
-# Carregar dados produzidos pelos scripts 01 e 02
+# Dados populacionais (scripts 01–02)
 ancoras      <- read_csv(file.path(caminho_tabelas, "tab00_ancoras_censitarias.csv"),
-                         show_col_types = FALSE)
+                         show_col_types = FALSE) 
 envelope     <- read_csv(file.path(caminho_tabelas, "tab01_envelope_demografico.csv"),
                          show_col_types = FALSE)
 diag_spline  <- read_csv(file.path(caminho_tabelas, "tab02_resumo_spline.csv"),
                          show_col_types = FALSE) |>
-  # ano_pior vem como float no CSV por causa do NA — converter para integer
   mutate(ano_pior = as.integer(ano_pior))
 comp_metodos <- read_csv(file.path(caminho_tabelas, "tab03_comparacao_metodos.csv"),
                          show_col_types = FALSE)
@@ -79,11 +75,51 @@ comparacao   <- read_csv(file.path(caminho_limpos, "comparacao_metodos_interpola
 pop_final    <- read_csv(file.path(caminho_limpos, "populacao_ibge_tratada.csv"),
                          show_col_types = FALSE)
 
-# Constantes derivadas dos dados — alimentam texto e quadros inline
+# Dados SIM — EDA (script 03b)
+tab_cobertura <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                    "tab_cobertura_temporal.csv"),
+                          show_col_types = FALSE)
+tab_cid       <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                    "tab_cid_subcod.csv"),
+                          show_col_types = FALSE)
+tab_dist      <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                    "tab_distribuicao_vars.csv"),
+                          show_col_types = FALSE)
+tab_cruz      <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                    "tab_cruzamento_sexo_faixa.csv"),
+                          show_col_types = FALSE)
+tab_serie     <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                    "tab_serie_bruta.csv"),
+                          show_col_types = FALSE)
+tab_flags     <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                    "tab_flags_atencao.csv"),
+                          show_col_types = FALSE)
+tab_resumo_eda <- read_csv(file.path(caminho_tabelas, "eda_sim",
+                                     "tab_resumo_eda.csv"),
+                           show_col_types = FALSE)
+
+# Série YoY (total)
+tab_serie_yoy <- tab_serie |>
+  filter(sexo_label == "Total") |>
+  arrange(ano) |>
+  mutate(
+    var_abs = n_obitos - lag(n_obitos),
+    var_pct = round(100 * (n_obitos / lag(n_obitos) - 1), 1)
+  )
+
+# Constantes derivadas — populacionais
 n_fora_spline  <- sum(diag_spline$n_anos_fora)
 dif_max_global <- max(comp_metodos$dif_max_pp)
 regiao_max_dif <- comp_metodos$local[which.max(comp_metodos$dif_max_pp)]
 ano_max_dif    <- comp_metodos$ano_max_dif[which.max(comp_metodos$dif_max_pp)]
+
+# Constantes derivadas — SIM
+total_obitos   <- tab_cobertura |> summarise(s = sum(Total)) |> pull(s)
+n_masc         <- tab_dist |> filter(variavel == "Sexo", categoria == "Masculino") |> pull(n)
+n_fem          <- tab_dist |> filter(variavel == "Sexo", categoria == "Feminino")  |> pull(n)
+pct_masc       <- tab_dist |> filter(variavel == "Sexo", categoria == "Masculino") |> pull(pct)
+razao_mf_total <- round(n_masc / n_fem, 2)
+maior_salto_abs <- tab_serie_yoy |> filter(!is.na(var_abs)) |> slice_max(var_abs, n = 1)
 ```
 
 ---
@@ -105,19 +141,17 @@ Project board: [github.com/users/EnigmaMajoris/projects/2](https://github.com/us
 
 A construção da base populacional seguiu uma estratégia em dois níveis distintos:
 
-**Nível 1 — Totais populacionais anuais:** obtidos integralmente de fontes
+**Nível 1 — Totais populacionais anuais:** foram obtidos integralmente de fontes
 observadas, sem imputação. Para os anos censitários e de contagem (2000, 2007,
-2010 e 2022), os totais provêm diretamente dos levantamentos do IBGE. Para os
-demais anos (2001–2006 e 2008–2021), utilizam-se as estimativas intercensitárias
-da Tabela SIDRA 6579.
+2010 e 2022), os totais provieram diretamente dos levantamentos do IBGE. Para os
+demais anos (2001–2006 e 2008–2021), foram utilizadas as estimativas intercensitárias da Tabela SIDRA 6579.
 
 **Nível 2 — Desagregação por sexo nos anos intermediários:** as proporções
 masculina e feminina foram interpoladas a partir de quatro âncoras observadas
 (2000, 2007, 2010 e 2022) e aplicadas sobre os totais do Nível 1.
 
-A principal decisão metodológica desta etapa — a escolha do método de
-interpolação das proporções por sexo — é documentada em detalhe na
-@sec-comparacao-metodos.
+A principal decisão metodológica desta etapa, a escolha do método de
+interpolação das proporções por sexo, é documentada em detalhe na @sec-comparacao-metodos.
 
 ## Fontes utilizadas
 
@@ -137,10 +171,10 @@ interpolação das proporções por sexo — é documentada em detalhe na
 
 ## Por que o total de 2007 diverge dos anos adjacentes?
 
-Ao visualizar a série do Brasil, o ano de 2007 apresenta total de
+Ao visualizar a série do Brasil, o ano de 2007 apresentou um total de
 **`r format(ancoras |> filter(local == "Brasil", ano == 2007) |> pull(populacao_total), big.mark = ".", decimal.mark = ",")`
 pessoas** — muito abaixo dos ~186 milhões de 2006 e ~189 milhões de 2008. Esse
-valor não é erro de processamento. Reflete a natureza da operação censitária.
+valor não foi erro de processamento, mas refletiu a natureza da operação censitária.
 
 ::: {.callout-important}
 ## Explicação oficial — IBGE (2007)
@@ -164,15 +198,15 @@ Disponível em:
 O valor de `r format(ancoras |> filter(local == "Brasil", ano == 2007) |> pull(populacao_total), big.mark = ".", decimal.mark = ",")` pessoas
 corresponde, portanto, à **população efetivamente recenseada de campo** —
 não à população total do Brasil em 2007. Por esse motivo, o total de 2007
-proveniente da Contagem **não é utilizado como denominador** nas taxas de
-mortalidade; essa função é exercida pelas estimativas anuais da Tabela 6579,
-que fornece valores completos e metodologicamente consistentes para todos os
+proveniente da Contagem **não foi utilizado como denominador** nas taxas de
+mortalidade; essa função foi exercida pelas estimativas anuais da Tabela 6579,
+que forneceu valores completos e metodologicamente consistentes para todos os
 anos, inclusive 2007.
 
 ## Papel da Contagem 2007 neste projeto
 
-A Contagem de 2007 é utilizada **exclusivamente como âncora para interpolação
-das proporções por sexo** — não dos totais populacionais. Essa distinção é
+A Contagem de 2007 foi utilizada **exclusivamente como âncora para interpolação
+das proporções por sexo**, não dos totais populacionais. Essa distinção foi
 fundamental: o que nos interessa de 2007 é a relação observada entre homens
 e mulheres, não o total absoluto recenseado.
 
@@ -210,11 +244,11 @@ representativas da população total?**
 
 Municípios de grande porte e metropolitanos tendem a concentrar **maior
 proporção feminina**, em razão dos padrões históricos de migração interna
-brasileira — onde mulheres migram em maior proporção para centros urbanos em
+brasileira, onde mulheres migram em maior proporção para centros urbanos em
 busca de trabalho doméstico e serviços [@simoes2016]. A exclusão desses
 municípios poderia, em tese, superestimar a proporção masculina na Contagem.
 
-Contudo, dois argumentos sustentam a manutenção da Contagem como âncora:
+Contudo, dois argumentos sustentaram a manutenção da Contagem como âncora:
 
 1. **Comparação com os Censos adjacentes:** a proporção masculina da Contagem
 2007 para o Brasil foi de
@@ -226,9 +260,7 @@ e o Censo 2010
 o que é demograficamente coerente com a tendência de feminização progressiva
 da população brasileira [@ibge2022projecoes].
 
-2. **Análise de sensibilidade (@sec-sensibilidade):** a inclusão da Contagem 2007
-como âncora reduz o intervalo máximo sem referência de 22 anos (2000–2022) para
-dois segmentos de no máximo 10 anos (2000–2010 e 2010–2022), aumentando
+2. **Análise de sensibilidade (@sec-sensibilidade):** a inclusão da Contagem 2007 como âncora reduz o intervalo máximo sem referência de 22 anos (2000–2022) para dois segmentos de no máximo 10 anos (2000–2010 e 2010–2022), aumentando
 substancialmente a fidelidade da interpolação.
 
 ---
@@ -296,11 +328,11 @@ knitr::include_graphics(
 )
 ```
 
-A spline cúbica produz trajetórias claramente não-plausíveis em quatro das seis
+A spline cúbica produziu trajetórias claramente não-plausíveis em quatro das seis
 regiões: após atingir um pico artificial em torno de 2005 (efeito da curvatura
 induzida pelo intervalo curto de apenas três anos entre as âncoras de 2007 e 2010),
-a série despenca acentuadamente até 2017–2018, ultrapassando os limites inferiores
-do envelope. A interpolação linear, por contraste, acompanha a tendência geral de
+a série despencou acentuadamente até 2017–2018, ultrapassando os limites inferiores
+do envelope. A interpolação linear, por contraste, acompanhou a tendência geral de
 suave declínio na proporção masculina sem oscilações espúrias.
 
 ## Diagnóstico quantitativo da spline
@@ -330,8 +362,8 @@ diag_spline |>
 A região Sudeste concentrou **`r diag_spline |> filter(local=="Sudeste") |> pull(n_anos_fora)` dos
 `r n_fora_spline` casos** de extrapolação, com desvio máximo de
 **`r round(diag_spline |> filter(local=="Sudeste") |> pull(desvio_max_pp), 3)` p.p.**
-em 2017. Essa concentração não é aleatória: o Sudeste possui as maiores metrópoles
-do país — exatamente os municípios excluídos da Contagem 2007 — o que amplia o
+em 2017. Essa concentração não foi aleatória: o Sudeste possui as maiores metrópoles
+do país, exatamente os municípios excluídos da Contagem 2007, o que ampliou o
 impacto do viés de seleção daquela fonte na âncora de 2007 e, consequentemente,
 na curvatura da spline naquele segmento.
 :::
@@ -391,7 +423,7 @@ A maior divergência entre os métodos atingiu
 **`r round(dif_max_global, 3)` p.p.** na região **`r regiao_max_dif`** em
 **`r ano_max_dif`**. Em termos populacionais, esse desvio corresponderia a um erro
 de aproximadamente **`r format(round(pop_final |> filter(local == regiao_max_dif, ano == ano_max_dif) |> pull(populacao_total) * dif_max_global / 100), big.mark=".", decimal.mark=",")`
-pessoas** na desagregação por sexo naquele ano — magnitude relevante para
+pessoas** na desagregação por sexo naquele ano, magnitude relevante para
 denominadores de taxas de mortalidade em estudos de séries temporais.
 
 ## Quadro comparativo final {#sec-quadro-comparativo}
@@ -440,8 +472,8 @@ tibble(
 A desagregação da população por sexo nos anos intermediários foi realizada por
 **interpolação linear por partes** das proporções masculina e feminina
 calculadas nas quatro âncoras censitárias observadas (Censos de 2000, 2010 e
-2022; Contagem da População de 2007). Dois métodos foram avaliados em paralelo —
-spline cúbica natural e interpolação linear — sobre as mesmas âncoras e o mesmo
+2022; Contagem da População de 2007). Dois métodos foram avaliados em paralelo,
+spline cúbica natural e interpolação linear, sobre as mesmas âncoras e o mesmo
 período.
 
 A spline cúbica produziu extrapolações fora do envelope demográfico plausível
@@ -455,7 +487,7 @@ no Sudeste em `r ano_max_dif`.
 
 A interpolação linear permaneceu integralmente dentro do envelope em todas as
 combinações ano-região avaliadas e, por ser monotônica em cada segmento por
-definição matemática, não gerou inflexões espúrias. Em face desses resultados,
+definição matemática, não gerou inflexões espúrias (curva artificial) . Em face desses resultados,
 a interpolação linear foi adotada como método para a série final.
 :::
 
@@ -473,9 +505,9 @@ knitr::include_graphics(
 )
 ```
 
-A @fig-sensibilidade mostra que a inclusão da Contagem 2007 introduz uma
-inflexão visível na série linear em algumas regiões — especialmente Sudeste e
-Sul — onde a proporção da Contagem de 2007 é ligeiramente superior à tendência
+A @fig-sensibilidade mostra que a inclusão da Contagem 2007 gerou uma
+inflexão visível na série linear em algumas regiões, especialmente Sudeste e
+Sul, onde a proporção da Contagem de 2007 é ligeiramente superior à tendência
 esperada entre 2000 e 2010. Isso é consistente com o viés de seleção discutido
 na @sec-contagem2007: a exclusão dos municípios maiores tende a superestimar
 levemente a proporção masculina na Contagem.
@@ -491,8 +523,8 @@ incerteza da estimativa intercensitária.
 A pergunta previsível é: *"se a Contagem 2007 tem cobertura parcial, por que
 usá-la como âncora?"*
 
-A resposta é que **a alternativa — não usar a Contagem e interpolar entre 2000
-e 2010 — também tem limitações**, e mais graves: produz uma série baseada em um
+A resposta é que **a alternativa (não usar a Contagem e interpolar entre 2000
+e 2010) também tem limitações**, e mais graves: produz uma série baseada em um
 único segmento de 10 anos sem referência intermediária observada. A Contagem 2007,
 apesar da cobertura parcial, é a única fonte de campo disponível para o período
 intercensitário, e suas proporções por sexo são biologicamente plausíveis e
@@ -518,14 +550,14 @@ knitr::include_graphics(
 A @fig-ancoras evidencia dois padrões relevantes para a discussão metodológica:
 
 1. **Tendência de feminização progressiva:** em todas as regiões, a proporção
-   masculina declina ao longo do período — de forma mais acentuada entre 2010 e
+   masculina declina ao longo do período, de forma mais acentuada entre 2010 e
    2022. Esse padrão é consistente com a literatura demográfica brasileira e com
    as projeções do IBGE [@ibge2018projecoes].
 
 2. **Variação máxima inferior a 2 p.p.:** em nenhuma região a diferença entre a
    maior e a menor proporção masculina observada supera 2 pontos percentuais ao
-   longo de 22 anos. Essa estreiteza da faixa de variação confirma que métodos
-   conservadores de interpolação são adequados — a suavidade adicional da spline
+   longo de 22 anos. Esse estreitamento da faixa de variação confirma que métodos
+   conservadores de interpolação são adequados. A suavidade adicional da spline
    não traz benefício analítico que justifique o risco de extrapolação.
 
 ```{r ancoras-todas}
@@ -587,6 +619,552 @@ pop_final |>
     footnote_as_chunk = TRUE
   )
 ```
+
+---
+
+# Validação e análise exploratória dos microdados SIM {#sec-eda-sim}
+
+## Contexto e fonte de dados
+
+Os microdados de mortalidade utilizados neste estudo provêm do **Sistema de
+Informações sobre Mortalidade (SIM)**, mantido pelo Ministério da Saúde e
+disponibilizado pelo DATASUS [@datasus2024sim]. O SIM é a principal fonte
+nacional de dados sobre causas de morte no Brasil e opera com base na
+Declaração de Óbito (DO), documento padronizado pelo Ministério da Saúde
+preenchido por médico atestante [@datasus2024sim]. A codificação das causas
+de óbito segue a Classificação Internacional de Doenças — décima revisão (CID-10).
+
+O acesso e o pré-processamento dos microdados foram realizados com o pacote
+`microdatasus` [@microdatasus2019] para a linguagem R, que automatiza o
+download por Unidade da Federação e decodifica as variáveis conforme os
+dicionários oficiais do DATASUS. Os registros de suicídio foram definidos pelos
+códigos CID-10 **X60 a X84** — "lesões autoprovocadas intencionalmente" —,
+categoria que engloba todos os métodos de suicídio consumado registrados no
+sistema [@who2021suicide].
+
+::: {.callout-note}
+## Decisão de design do pipeline (v10.0)
+Por limitação de memória RAM (o arquivo bruto do SIM para o período 2000–2022
+contém aproximadamente 26 milhões de registros), o filtro CID X60–X84 foi
+aplicado individualmente em cada ano durante o download, antes da consolidação
+dos arquivos. O arquivo resultante `sim_suicidio_2000_2022.rds` contém
+exclusivamente registros de suicídio (~240 mil linhas), tornando o pipeline
+reproduzível em máquinas com recursos computacionais limitados. O script
+`03_clean_dados.R` re-aplica o filtro como verificação de integridade.
+:::
+
+## Resumo da limpeza e validação {#sec-resumo-limpeza}
+
+```{r tbl-resumo-eda}
+#| label: tbl-resumo-eda
+#| tbl-cap: "Resumo da validação e limpeza dos microdados SIM — Brasil, 2000–2022"
+
+tab_resumo_eda |>
+  kable(col.names = c("Item", "Valor"), align = c("l", "r")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+```
+
+O processo de limpeza resultou em perdas mínimas: dos **`r format(240844, big.mark=".")`**
+registros com CID X60–X84 presentes no arquivo bruto, apenas **42 foram excluídos**
+(0,02%), sendo 2 por data de óbito inválida e 40 por sexo não informado ou
+codificado fora das categorias válidas. A base final contém
+**`r format(total_obitos, big.mark=".")` óbitos** por suicídio no período
+2000–2022. Nenhuma flag de atenção foi disparado pelos critérios de qualidade
+pré-definidos; nenhuma variável analítica superou 5% de valores ausentes e
+todos os 25 subcódigos CID X60–X84 apresentaram ao menos um registro.
+
+::: {.callout-important}
+## Limitação: ausência de dados em 2002 e 2005
+Na execução original do script de download, os anos **2002 e 2005** não foram
+incorporados ao arquivo bruto em razão de um problema de codificação (*encoding*)
+em arquivos `.dbc` desses anos — bytes inválidos no padrão `latin1` interrompiam
+silenciosamente o processamento pelo `process_sim()`, retornando `NULL` sem
+mensagem de erro explícita. O problema foi identificado durante a análise
+exploratória (ausência desses anos na tabela de cobertura) e corrigido na versão
+10.0 do script `01_download_dados.R`, que passou a aplicar `iconv()` com
+`sub = "byte"` antes do processamento. Os dados de 2002 (7.722 registros) e
+2005 (8.549 registros) foram recuperados e confirmados como plausíveis pela
+continuidade da tendência da série.
+:::
+
+## Cobertura temporal {#sec-cobertura-temporal}
+
+```{r fig06-cobertura}
+#| label: fig-cobertura-temporal
+#| fig-cap: "Óbitos por suicídio (CID X60–X84) por sexo — Brasil, 2000–2022. Linha tracejada: total. Faixa cinza: período da pandemia de COVID-19 (2020–2022)."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "eda_sim", "fig_cobertura_temporal.png")
+)
+```
+
+```{r tbl-cobertura}
+#| label: tbl-cobertura-temporal
+#| tbl-cap: "Óbitos por suicídio por ano e sexo — Brasil, 2000–2022"
+
+tab_cobertura |>
+  mutate(across(c(Feminino, Masculino, Total),
+                ~format(., big.mark = ".", trim = TRUE))) |>
+  kable(col.names = c("Ano", "Feminino", "Masculino", "Total"),
+        align = c("c", "r", "r", "r")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) |>
+  row_spec(which(tab_cobertura$ano >= 2020), background = "#fff3cd") |>
+  footnote(general = "Linhas em amarelo: período da pandemia de COVID-19.",
+           footnote_as_chunk = TRUE)
+```
+
+A série apresentou **crescimento secular ininterrupto** entre 2000 e 2022, com o
+total de óbitos passando de **6.778 em 2000** para **16.461 em 2022** — aumento
+de 143% em 22 anos. Esse crescimento é consistente com as tendências documentadas
+na literatura nacional [@lovisi2009; @minayo2010; @ribeiro2018] e internacional
+[@who2021suicide; @opas2021], embora parte do incremento inicial possa refletir
+melhora progressiva da cobertura e da qualidade de codificação do SIM nos
+primeiros anos da série (2000–2003), fenômeno já documentado para causas externas
+[@lovisi2009].
+
+A razão masculino/feminino manteve-se estável em aproximadamente
+**`r razao_mf_total`:1** ao longo de todo o período, resultado coerente com o
+denominado *paradoxo de gênero no suicídio*: homens morrem por suicídio em
+proporção muito superior às mulheres, embora estas apresentem maiores taxas de
+tentativas [@schrijvers2012; @nock2008].
+
+::: {.callout-warning}
+## Nota metodológica — ano de 2001
+O salto de **+14,1%** observado entre 2000 e 2001 é o maior da série e
+provavelmente reflete **melhora de cobertura do SIM**, e não um aumento real
+de óbitos. O SIM operou em regime de implementação gradual ao longo dos
+primeiros anos da série CID-10; a cobertura de causas externas, categoria
+que inclui o suicídio, tende a ser subnotificada nos anos iniciais de
+operação de sistemas de informação em saúde [@lovisi2009]. Esse ponto será
+tratado como limitação metodológica no manuscrito.
+:::
+
+## Completude das variáveis {#sec-completude}
+
+```{r fig07-completude}
+#| label: fig-completude
+#| fig-cap: "Percentual de valores ausentes por variável — comparação entre a base pós-filtro CID e a base limpa final. Linha tracejada vermelha: limiar de alerta (5%)."
+#| out-width: "90%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "eda_sim", "fig_completude.png")
+)
+```
+
+A completude da base é elevada em todas as variáveis analíticas. A única
+variável com percentual de missing acima de zero na base limpa é `faixa_etaria`
+(0,25%), decorrente de 592 registros com `IDADE` ausente ou com valor fora do
+padrão de codificação esperado (prefixo `4xx` para anos completos). Esses
+registros foram **mantidos na base** e serão excluídos automaticamente nas
+análises que requerem estratificação etária, via `na.rm` ou `drop_na()`,
+sem impacto no total da série temporal agregada.
+
+## Distribuição dos subcódigos CID X60–X84 {#sec-cid}
+
+```{r fig08-cid}
+#| label: fig-cid-subcod
+#| fig-cap: "Frequência por subcódigo CID X60–X84 — Brasil, 2000–2022. Nenhum subcódigo apresentou frequência zero."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "eda_sim", "fig_cid_subcod.png")
+)
+```
+
+```{r tbl-cid}
+#| label: tbl-cid-metodos
+#| tbl-cap: "Distribuição por método de suicídio (subcódigo CID) — Brasil, 2000–2022"
+
+tab_cid |>
+  arrange(desc(n)) |>
+  mutate(
+    n   = format(n, big.mark = ".", trim = TRUE),
+    pct = glue("{pct}%")
+  ) |>
+  select(
+    `CID`    = CAUSABAS_3,
+    `Grupo`  = grupo_cid,
+    `N`      = n,
+    `%`      = pct
+  ) |>
+  kable(align = c("c", "l", "r", "r")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) |>
+  row_spec(1, bold = TRUE, background = "#D4EDDA")
+```
+
+O **enforcamento/estrangulamento (X70)** é o método predominante, respondendo
+por **64,8% dos óbitos**, padrão consistente com estudos brasileiros
+[@bando2012; @minayo2010] e com o perfil de países de baixa e média renda,
+onde métodos de alta letalidade e amplo acesso predominam [@mann2005].
+A elevada proporção de X70 tem implicação direta para a modelagem da série
+agregada: a dinâmica temporal do total é fortemente determinada por um único
+subcódigo.
+
+O segundo grupo em frequência é **armas de fogo**, X71 (revólver), X72
+(espingarda/rifle) e X74 (outras armas de fogo) somam aproximadamente 10,7%
+dos óbitos. A **exposição a pesticidas (X68)** representa 5,05% do total,
+marcador típico de contexto rural e agrícola no Brasil, concentrado
+historicamente nas regiões Sul e Centro-Oeste [@bando2012].
+
+Todos os 25 subcódigos CID X60–X84 apresentaram ao menos um registro no
+período, indicando ausência de subcodificação sistemática de categorias
+específicas.
+
+## Distribuição das variáveis criadas {#sec-distribuicao}
+
+```{r fig09-dist}
+#| label: fig-distribuicao
+#| fig-cap: "Óbitos por suicídio segundo sexo e faixa etária — Brasil, 2000–2022. Percentuais indicam a proporção dentro de cada sexo."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "eda_sim", "fig_distribuicao_vars.png")
+)
+```
+
+```{r tbl-cruz}
+#| label: tbl-cruzamento-sexo-faixa
+#| tbl-cap: "Cruzamento sexo × faixa etária — óbitos totais no período 2000–2022"
+
+tab_cruz |>
+  filter(!is.na(faixa_etaria)) |>
+  mutate(
+    n = format(n, big.mark = ".", trim = TRUE),
+    pct_dentro_sexo = glue("{pct_dentro_sexo}%")
+  ) |>
+  kable(col.names = c("Sexo", "Faixa etária", "N", "% dentro do sexo"),
+        align = c("l", "l", "r", "r")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) |>
+  collapse_rows(columns = 1, valign = "top")
+```
+
+A distribuição etária se apresentou **notavelmente similar entre os sexos**: em 
+ambos, as faixas 15–29 anos (~29%) e 30–44 anos (~30–31%) concentram juntas cerca 
+de 60% dos óbitos, com declínio progressivo nas faixas subsequentes. A distribuição  
+indicou que a diferença entre masculino e feminino não reside no *padrão etário* 
+do suicídio, que é semelhante, mas na *magnitude* em todas as faixas, consistente
+com o paradoxo de gênero descrito na literatura [@schrijvers2012].
+
+Uma informação que merece atenção clínica é a **proporção de menores de 15 anos**:
+2,9% do total feminino versus 0,9% do masculino. Em números absolutos, 1.477
+óbitos femininos contra 1.635 masculinos nessa faixa, razão M/F de apenas
+1,1:1, muito inferior à razão global de `r razao_mf_total`:1. Esse padrão
+é consistente com estudos internacionais que demonstram que a diferença de sexo
+no suicídio consumado é menor entre adolescentes do que em adultos
+[@machado2015; @schrijvers2012]. A faixa etária de menores de 15 anos
+concentra um n reduzido (~3.100 óbitos em 23 anos), o que pode limitar análises
+estratificadas independentes para esse subgrupo.
+
+**Distribuição regional:** o Sudeste concentra **37,6%** dos óbitos em termos
+absolutos, seguido de Sul (23,7%) e Nordeste (22,6%). Contudo, a análise por
+contagem absoluta é influenciada pelo tamanho populacional de cada região. A 
+análise por taxa de mortalidade pode alterar substancialmente esse ranking, 
+especialmente para as regiões Norte e Sul, historicamente distintas no padrão 
+brasileiro de suicídio [@bando2012].
+
+## Série temporal bruta e variação anual {#sec-serie-bruta}
+
+```{r fig10-serie}
+#| label: fig-serie-bruta
+#| fig-cap: "Série temporal de óbitos por suicídio e variação percentual anual — Brasil, 2000–2022. Painel A: série por sexo. Painel B: variação anual do total (verde = crescimento; laranja = redução). Faixa cinza: período da pandemia de COVID-19."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "eda_sim", "fig_serie_bruta.png")
+)
+```
+
+```{r tbl-yoy}
+#| label: tbl-variacao-anual
+#| tbl-cap: "Variação anual no total de óbitos por suicídio — Brasil, 2001–2022"
+
+tab_serie_yoy |>
+  filter(!is.na(var_pct)) |>
+  select(ano, n_obitos, var_abs, var_pct) |>
+  mutate(
+    n_obitos = format(n_obitos, big.mark = ".", trim = TRUE),
+    var_abs  = format(var_abs,  big.mark = ".", trim = TRUE),
+    var_pct  = glue("{var_pct}%")
+  ) |>
+  kable(col.names = c("Ano", "N óbitos", "Var. absoluta", "Var. %"),
+        align = c("c", "r", "r", "r")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) |>
+  row_spec(which(tab_serie_yoy$ano[!is.na(tab_serie_yoy$var_pct)] >= 2020),
+           background = "#fff3cd") |>
+  footnote(general = "Linhas em amarelo: período da pandemia de COVID-19.",
+           footnote_as_chunk = TRUE)
+```
+
+A análise da variação anual permitiu identificar quatro fases distintas na
+dinâmica da série:
+
+**Fase 1 (2000–2010): crescimento moderado.** Excluindo o salto de 2001
+(possivelmente artefato de cobertura, conforme discutido em @sec-cobertura-temporal),
+as variações anuais oscilaram entre −0,2% e 5,2%, sem padrão de aceleração
+evidente. O total cresceu de ~6.800 para ~9.400 óbitos no período.
+
+**Fase 2 (2011–2016): aceleração progressiva.** O crescimento anual se manteve
+entre 1,1% e 4,9%, resultando em incremento acumulado de ~17% (de ~9.800 para
+~11.400 óbitos). Esse padrão coincidiu com um período de expansão econômica
+seguida de deterioração das condições sociais no Brasil a partir de 2014–2015,
+contexto associado na literatura ao agravamento de fatores de risco para saúde
+mental [@lima2021covid].
+
+**Fase 3 (2017–2019): segunda aceleração.** O ano de 2017 registrou o maior
+incremento absoluto do período pré-pandemia: **+1.059 óbitos (+9,3%)** em um
+único ano. Esse salto coincidiu com o pico de desemprego da recessão brasileira
+(2015–2016), corroborando evidências da associação entre crises econômicas e
+mortalidade por suicídio [@mann2005]. A série atinge 13.518 óbitos em 2019.
+
+**Fase 4 (2020–2022): período pandêmico.** O comportamento da série durante a
+pandemia de COVID-19 apresenta padrão bifásico: crescimento **moderado em 2020**
+(+2,3%, +314 óbitos), abaixo da tendência da fase anterior, seguido de
+**salto expressivo em 2021** (+12,0%, +1.663 óbitos), o maior incremento
+absoluto de toda a série. O ano de 2021 é o segundo ano de pandemia no Brasil,
+marcado pelo colapso dos sistemas de saúde, segundo pico de mortalidade por
+COVID-19, prolongamento das restrições sociais e crise econômica agravada.
+Essa dinâmica é consistente com estudos internacionais que identificaram
+elevação da mortalidade por suicídio no segundo ano da pandemia em vários
+países [@pirkis2021]. Em 2022, o crescimento continuou (+6,2%), encerrando
+o período com 16.461 óbitos, o maior valor anual da série.
+
+::: {.callout-tip}
+## Implicações para a modelagem (cards #6–#8)
+Três pontos desta análise exploratória orientaram as etapas
+de modelagem:
+
+1. **Tendência de crescimento secular sem reversão** — a série não registrou
+   redução real em nenhum ano do período. Isso sugere componente de tendência
+   estocástica ou determinística que precisa ser acomodado nos modelos SARIMA
+   e ETS.
+
+2. **Possível quebra estrutural em 2017 e/ou 2021** — os dois maiores saltos
+   absolutos da série ocorreram nesses anos. Testes formais de mudança estrutural
+   (`strucchange`) devem avaliar se há quebra de nível ou de inclinação
+   nesses pontos.
+
+3. **Efeito COVID como candidato a variável exógena** — o comportamento
+   assimétrico de 2020–2021 (moderação seguida de aceleração) é coerente
+   com a hipótese de efeito temporal defasado da pandemia sobre a mortalidade
+   por suicídio [@pirkis2021], o que fundamenta a inclusão de uma *dummy*
+   COVID-19 no modelo ARIMAX.
+:::
+
+## Flags de atenção e decisões metodológicas {#sec-flags}
+
+```{r tbl-flags}
+#| label: tbl-flags
+#| tbl-cap: "Flags de atenção identificados na EDA dos microdados SIM"
+
+if (nrow(tab_flags) == 0) {
+  cat("Nenhum flag de atenção identificado. Base dentro dos parâmetros de qualidade pré-definidos.")
+} else {
+  tab_flags |>
+    kable(col.names = c("Categoria", "Ano", "Variável", "Descrição"),
+          align = c("l", "c", "l", "l")) |>
+    kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover"))
+}
+```
+
+**Nenhuma flag de atenção foi disparada.** A base final atendeu a todos os
+critérios de qualidade pré-definidos: nenhuma variável analítica com _missings_
+acima de 5%, nenhum ano com total abaixo de 100 registros, e todos os 25
+subcódigos CID X60–X84 com ao menos um registro no período.
+
+### Decisões metodológicas desta etapa
+
+| Decisão | Justificativa | Impacto nos próximos scripts |
+|---|---|---|
+| Manter os 592 registros com `faixa_etaria = NA` na base | N muito pequeno; exclusão causaria viés na série temporal agregada | Excluídos apenas em análises estratificadas por faixa |
+| Não excluir registros de menores de 15 anos | Faixa com achado clínico relevante (razão M/F ≈ 1:1) | Manter em análise agregada; avaliar n para modelagem separada |
+| Tratar 2001 como possível artefato de cobertura | Salto de +14,1% inconsistente com a tendência subsequente | Documentar como limitação no manuscrito; testar sensibilidade excluindo 2000–2001 |
+| Manter todos os 23 anos na base (incluindo 2002 e 2005 recuperados) | Dados plausíveis e consistentes com a tendência da série | Pipeline corrigido na v10.0 do script 01 |
+
+: Decisões metodológicas da etapa de validação e análise exploratória (ead) {#tbl-decisoes-eda}
+
+*Scripts desta etapa: `01_download_dados.R` (v10.0) · `03_clean_dados.R` (v3.0) · `03b_eda_sim.R` (v1.0)*
+
+---
+
+# Análise descritiva e taxas brutas {#sec-descritiva}
+
+```{r setup-descritiva}
+#| include: false
+
+# Dados do card #5 (script 04_analitico_descritivo.R)
+tab_taxas_anuais  <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_taxas_anuais.csv"),
+  show_col_types = FALSE
+)
+tab_taxas_men_tot <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_taxas_mensais_total.csv"),
+  show_col_types = FALSE
+)
+tab_razao_mf <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_razao_mf_anual.csv"),
+  show_col_types = FALSE
+)
+tab_testes_saz <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_testes_sazonalidade.csv"),
+  show_col_types = FALSE
+)
+tab_comp_gran <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_comparativo_granularidade.csv"),
+  show_col_types = FALSE
+)
+tab_taxas_regiao <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_taxas_regiao.csv"),
+  show_col_types = FALSE
+)
+tab_taxas_faixa <- read_csv(
+  file.path(caminho_tabelas, "analitico_descritivo", "tab_taxas_faixa_etaria.csv"),
+  show_col_types = FALSE
+)
+
+# Constantes derivadas
+taxa_2000     <- tab_taxas_anuais |> filter(grupo == "Total", ano == 2000) |> pull(taxa) |> round(2)
+taxa_2022     <- tab_taxas_anuais |> filter(grupo == "Total", ano == 2022) |> pull(taxa) |> round(2)
+razao_mf_min  <- min(tab_razao_mf$razao_mf, na.rm = TRUE)
+razao_mf_max  <- max(tab_razao_mf$razao_mf, na.rm = TRUE)
+n_mensal      <- nrow(tab_taxas_men_tot)
+n_anual       <- tab_taxas_anuais |> filter(grupo == "Total") |> nrow()
+```
+
+## Contextualização metodológica {#sec-descritiva-metodo}
+
+A análise descritiva foi conduzida em dois níveis complementares. O **bloco analítico** calculou taxas brutas mensais e anuais, decompôs as séries pela técnica STL _(**S**easonal **Tr**end descomposition using **L**oess)_ e avaliou formalmente a sazonalidade, fornecendo insumos diretos para a modelagem. O **bloco descritivo** calculou taxas estratificadas por faixa etária e macrorregião.
+
+**Fórmula da taxa bruta:** $\text{Taxa}_t = \frac{D_t}{P_t} \times 10^5$. Para as taxas mensais, o denominador foi $P_{\text{anual}}/12$, abordagem padrão na literatura epidemiológica para séries mensais de mortalidade [@brasil_datasus].
+
+## Taxas brutas anuais {#sec-taxas-anuais}
+
+```{r fig11-taxas-anuais}
+#| label: fig-taxas-anuais
+#| fig-cap: "Taxa bruta de mortalidade por suicídio por 100.000 habitantes — Brasil, 2000–2022, por sexo. Faixa cinza: período da pandemia de COVID-19."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "analitico_descritivo", "fig_serie_taxas_anuais.png")
+)
+```
+
+A taxa bruta de mortalidade por suicídio cresceu de **`r taxa_2000`** para **`r taxa_2022` por 100.000 habitantes** entre 2000 e 2022, incremento de `r round((taxa_2022/taxa_2000 - 1)*100, 1)`%. A razão de taxas M/F oscilou entre **`r razao_mf_min`** e **`r razao_mf_max`** sem tendência sistemática, consistente com o *gender paradox* do suicídio [@schrijvers2012].
+
+## Escolha de granularidade {#sec-granularidade}
+
+```{r tbl-comp-granularidade}
+#| label: tbl-comp-granularidade
+#| tbl-cap: "Comparativo de critérios para escolha da granularidade da série para modelagem"
+
+tab_comp_gran |>
+  kable(col.names = c("Critério", "Série anual", "Série mensal"),
+        align = c("l", "c", "c")) |>
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover"))
+```
+
+A série mensal (n=`r n_mensal`, frequency=12) foi adotada como **série principal para modelagem**: autocorrelação máxima de 0,887 vs 0,415 da anual; sazonalidade detectável apenas nessa granularidade. A série anual (n=`r n_anual`) é mantida como comparação para avaliar impacto da granularidade.
+
+## Decomposição STL {#sec-stl}
+
+```{r fig12-stl-total}
+#| label: fig-stl-total
+#| fig-cap: "Decomposição STL da taxa mensal — Total — Brasil, 2000–2022. s.window = 'periodic', robust = TRUE."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "analitico_descritivo", "fig_stl_total.png")
+)
+```
+
+```{r fig13-stl-sexo}
+#| label: fig-stl-sexo
+#| fig-cap: "Componente de tendência STL por sexo — Brasil, 2000–2022."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "analitico_descritivo", "fig_stl_sexo.png")
+)
+```
+
+A decomposição revelou três características para a modelagem: (1) **tendência** de crescimento secular em formato de "S" — lento até 2013, aceleração progressiva 2014–2019, novo salto a partir de 2020; (2) **sazonalidade aditiva** com amplitude ±0,4/100k estável ao longo de todo o período, com picos em jan/mar e vales em jun/jul; (3) **resíduo** contido em ±0,5 sem outliers extremos após correção do denominador de 2007.
+
+A comparação das tendências por sexo evidencia dinâmicas estruturalmente distintas: a curva masculina é quase horizontal até ~2013 e depois acelera intensamente; a feminina cresce de forma mais suave e linear. Essa heterogeneidade justifica os modelos separados do card #9.
+
+## Testes formais de sazonalidade {#sec-sazonalidade}
+
+```{r tbl-testes-saz}
+#| label: tbl-testes-saz
+#| tbl-cap: "Testes formais de sazonalidade — série mensal, Brasil, 2000–2022"
+
+tab_testes_saz |>
+  kable(col.names = c("Teste", "Estatística", "p-valor", "Conclusão"),
+        align = c("l", "r", "r", "l")) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+```
+
+Os três testes rejeitam H0 (p < 0,0001). A concordância entre QS (baseado em autocorrelação), Friedman (não-paramétrico) e Kruskal-Wallis fornece evidência inequívoca de sazonalidade mensal. Implicação para modelagem: SARIMA precisa de componente sazonal `(P,D,Q)[12]`; ETS deve incluir componente sazonal aditivo.
+
+## ACF e PACF — implicações para ordens dos modelos {#sec-acf-pacf}
+
+```{r fig14-acf-mensal}
+#| label: fig-acf-mensal
+#| fig-cap: "ACF e PACF da taxa mensal (Total) — Brasil, 2000–2022."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "analitico_descritivo", "fig_acf_pacf_mensal.png")
+)
+```
+
+A ACF exibe decaimento lento até lag 36, padrão de raiz unitária, indicando $d \geq 1$. A PACF apresenta picos nos lags 1, 2 e 12, sugerindo AR(1–2) e sazonalidade AR. Ponto de partida para o `auto.arima()`: **SARIMA(1–2, 1, 0–1)(1, 1, 0)[12]**.
+
+::: {.callout-tip}
+## Decisões metodológicas do card #5
+
+| Decisão | Justificativa |
+|---|---|
+| Série mensal como principal | n=276 vs 23; sazonalidade detectável; ACF mais rica |
+| Denominador mensal = pop_anual/12 | Padrão literatura; variação intra-anual desprezível |
+| STL com `s.window="periodic"`, `robust=TRUE` | Sazonalidade estável; robusto a 2021 |
+| Denominador 2007 = interpolação Tab6579 | Contagem 2007 é parcial (~109M vs ~188M reais) |
+| Série anual mantida como comparação | Avalia impacto de granularidade no card #8 |
+
+*Script: `04_analitico_descritivo.R` (v1.0) · Script 01: v11.0*
+:::
+
+## Taxas por macrorregião {#sec-taxas-regiao}
+
+```{r fig15-taxas-regiao}
+#| label: fig-taxas-regiao
+#| fig-cap: "Taxa de mortalidade por suicídio por macrorregião — Brasil, 2000–2022."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "analitico_descritivo", "fig_taxas_regiao.png")
+)
+```
+
+A análise por taxa inverte o ranking obtido pela contagem absoluta. A **região Sul** lidera em todo o período (~8/100k em 2000 → ~12,5/100k em 2022). O achado mais relevante é a **convergência entre Norte, Nordeste e Sudeste** ao final do período (~7/100k em 2022), indicando crescimento proporcionalmente maior nas regiões historicamente mais baixas [@bando2012].
+
+## Taxas por faixa etária {#sec-taxas-faixa}
+
+```{r fig16-taxas-faixa}
+#| label: fig-taxas-faixa
+#| fig-cap: "Taxa de mortalidade por suicídio por faixa etária — Brasil, 2000–2022. Denominador: população total Brasil (taxa aproximada)."
+#| out-width: "100%"
+
+knitr::include_graphics(
+  file.path(caminho_figuras, "analitico_descritivo", "fig_taxas_faixa.png")
+)
+```
+
+::: {.callout-warning}
+## Limitação — taxas por faixa etária
+Denominador = população total Brasil, não a população específica de cada faixa (indisponível em série anual contínua nas tabelas IBGE utilizadas). As taxas são adequadas para comparação de **tendências relativas**, não de taxas absolutas. O denominador ideal (Tab. 7358) está reservado para análise futura.
+:::
+
+A faixa **30–44 anos** liderou em todo o período. Destaque para a **60+ anos**, que apresentou a maior aceleração proporcional recente, consistente com o impacto do isolamento social pandêmico sobre idosos [@pirkis2021].
 
 ---
 

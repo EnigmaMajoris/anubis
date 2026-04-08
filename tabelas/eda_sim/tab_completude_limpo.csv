@@ -1,0 +1,6 @@
+variavel,n_total,n_valido,n_missing,pct_missing,base
+CAUSABAS,240802,240802,0,0,limpo
+DTOBITO,240802,240802,0,0,limpo
+SEXO,240802,240802,0,0,limpo
+IDADE,240802,240210,592,0.25,limpo
+CODMUNRES,240802,240802,0,0,limpo
