@@ -1,0 +1,9 @@
+Critério,Série anual,Série mensal
+Número de observações (n),23,276
+Autocorrelação máxima nos primeiros lags,0.739,0.904
+Coeficiente de variação da série,0.188,0.194
+Sazonalidade detectável,Não (frequency=1),Sim (testes formais)
+Componente sazonal SARIMA possível,Não (sem ciclo sazonal),"Sim — SARIMA(p,d,q)(P,D,Q)[12]"
+Risco de overfitting (série curta),Alto,Baixo
+Padrão predominante na literatura de suicídio,Frequente em estudos nacionais,Frequente em análises de intervenção
+Granularidade adotada para modelagem,Secundária (comparação),Principal

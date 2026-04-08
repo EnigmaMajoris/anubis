@@ -1,0 +1,7 @@
+serie,granularidade,adf_stat,adf_pvalor,kpss_stat,kpss_pvalor,pp_stat,pp_pvalor,ndiffs,nsdiffs,conclusao
+Total,mensal,1.6038,0.99,1.6084,0.01,-95.0324,0.01,1,0,Não estacionária — diferenciação necessária
+Masculino,mensal,1.7333,0.99,1.6247,0.01,-100.8151,0.01,1,0,Não estacionária — diferenciação necessária
+Feminino,mensal,-0.5022,0.9813,1.5498,0.01,-173.6932,0.01,1,0,Não estacionária — diferenciação necessária
+Total,anual,3.7374,0.99,0.4183,0.0693,9.2186,0.99,2,NA,Não estacionária — diferenciação necessária
+Masculino,anual,3.6069,0.99,0.4163,0.0701,9.9118,0.99,2,NA,Não estacionária — diferenciação necessária
+Feminino,anual,2.1752,0.99,0.4231,0.0672,2.3062,0.99,1,NA,Não estacionária — diferenciação necessária

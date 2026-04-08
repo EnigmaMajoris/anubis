@@ -1,0 +1,7 @@
+serie,granularidade,metodo,aicc,bic,log_lik
+Total,mensal,"ETS(M,A,M)",787.83,847,-375.73
+Masculino,mensal,"ETS(M,A,M)",1105.36,1164.54,-534.49
+Feminino,mensal,"ETS(M,A,M)",635.21,694.38,-299.42
+Total,anual,"ETS(M,A,N)",11.73,13.88,0.9
+Masculino,anual,"ETS(M,A,N)",34.03,36.18,-10.25
+Feminino,anual,"ETS(M,A,N)",-14.91,-12.76,14.22
