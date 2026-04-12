@@ -45,7 +45,7 @@ Análise estatística de séries temporais em saúde mental no Brasil, com foco 
 <td>📧 henrique.pegorari@hotmail.com</td>
 </tr>
 <tr>
-<td><img align="left" alt="img" src="https://github.com/EnigmaMajoris/EnigmaMajoris/blob/main/githubicon.png" width="22" height="22" /> <a href="https://github.com/HenriquePeg12s">HenriquePeg12</td>
+<td><img align="left" alt="img" src="https://github.com/EnigmaMajoris/EnigmaMajoris/blob/main/githubicon.png" width="22" height="22" /> <a href="https://github.com/HenriquePeg12">HenriquePeg12</td>
 </tr>
 
 </table>
